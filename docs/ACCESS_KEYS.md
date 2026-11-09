@@ -25,6 +25,11 @@ código: toda chave é gerada pelo CLI administrativo.
 A Vercel não guarda arquivos entre requisições, então lá as chaves vêm da variável de ambiente
 `BIOLAB_KEYS` (`EnvKeyStore`, somente leitura). Ela contém só os hashes, nunca as chaves.
 
+Primeira configuração (na sua máquina): `npm run vercel:setup` gera os segredos, uma chave
+Completo e uma Básico, e imprime as três variáveis para colar na Vercel. Nada é gravado em disco.
+
+Para criar mais chaves depois:
+
 ```bash
 # na sua máquina, com os MESMOS BIOLAB_KEY_PEPPER e BIOLAB_SESSION_SECRET da Vercel
 npm run keys:create -- --tier completo --label "Escola X" --max-devices 0

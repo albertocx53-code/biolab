@@ -13,7 +13,8 @@
     "keys:create": "tsx --conditions=react-server scripts/keys.mts create",
     "keys:list": "tsx --conditions=react-server scripts/keys.mts list",
     "keys:revoke": "tsx --conditions=react-server scripts/keys.mts revoke",
-    "keys:export": "tsx --conditions=react-server scripts/keys.mts export"
+    "keys:export": "tsx --conditions=react-server scripts/keys.mts export",
+    "vercel:setup": "tsx --conditions=react-server scripts/vercel-setup.mts"
   },
   "engines": {
     "node": ">=22.12"
