@@ -2,7 +2,7 @@
   "name": "biolab3d",
   "version": "0.1.0",
   "private": true,
-  "description": "BioLab 3D — A Biologia ganha vida na sua aula.",
+  "description": "BioLab 3D \u2014 A Biologia ganha vida na sua aula.",
   "scripts": {
     "dev": "next dev -p 3000",
     "build": "next build",
@@ -12,7 +12,8 @@
     "test:e2e": "playwright test --trace off",
     "keys:create": "tsx --conditions=react-server scripts/keys.mts create",
     "keys:list": "tsx --conditions=react-server scripts/keys.mts list",
-    "keys:revoke": "tsx --conditions=react-server scripts/keys.mts revoke"
+    "keys:revoke": "tsx --conditions=react-server scripts/keys.mts revoke",
+    "keys:export": "tsx --conditions=react-server scripts/keys.mts export"
   },
   "engines": {
     "node": ">=22.12"

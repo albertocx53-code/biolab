@@ -20,6 +20,21 @@ código: toda chave é gerada pelo CLI administrativo.
 - Para produção com várias instâncias: implementar `KeyStore` sobre Postgres/Supabase usando
   [`docs/db/001_access_keys.sql`](db/001_access_keys.sql).
 
+## Na Vercel (hoje)
+
+A Vercel não guarda arquivos entre requisições, então lá as chaves vêm da variável de ambiente
+`BIOLAB_KEYS` (`EnvKeyStore`, somente leitura). Ela contém só os hashes, nunca as chaves.
+
+```bash
+# na sua máquina, com os MESMOS BIOLAB_KEY_PEPPER e BIOLAB_SESSION_SECRET da Vercel
+npm run keys:create -- --tier completo --label "Escola X" --max-devices 0
+npm run keys:export      # copie o resultado para BIOLAB_KEYS na Vercel e faça redeploy
+```
+
+Limitações deste modo: criar ou revogar chave exige atualizar `BIOLAB_KEYS` e publicar de novo; o
+limite de dispositivos não é aplicado (cada instância só lembra os aparelhos em memória); o
+limitador de tentativas é por instância. O banco de dados abaixo resolve as três coisas.
+
 ## Validação (servidor)
 
 `POST /api/access` → `validateAccessKey()`:
