@@ -16,17 +16,20 @@ export interface QualitySettings {
   environment: boolean;
   /** Hover highlighting needs a raycast per pointer move. */
   hover: boolean;
+  /** Screen-space ambient occlusion (soft contact shadows between structures). */
+  ao: boolean;
 }
 
 export const QUALITY: Record<QualityProfile, QualitySettings> = {
   economico: {
     label: 'Econômico',
-    description: 'Para computadores mais simples: resolução reduzida e efeitos desligados.',
+    description: 'Para computadores mais simples: resolução reduzida e sem sombreamento de contato.',
     dpr: [0.75, 1],
     antialias: false,
     adaptive: true,
-    environment: false,
+    environment: true,
     hover: false,
+    ao: false,
   },
   equilibrado: {
     label: 'Equilibrado',
@@ -36,6 +39,7 @@ export const QUALITY: Record<QualityProfile, QualitySettings> = {
     adaptive: true,
     environment: true,
     hover: true,
+    ao: true,
   },
   alta: {
     label: 'Alta Qualidade',
@@ -45,6 +49,7 @@ export const QUALITY: Record<QualityProfile, QualitySettings> = {
     adaptive: false,
     environment: true,
     hover: true,
+    ao: true,
   },
 };
 

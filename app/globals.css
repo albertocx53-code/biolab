@@ -153,3 +153,113 @@ body {
     transition-duration: 0.001ms !important;
   }
 }
+
+/* ------------------------------------------------------------------------
+ * Light "atlas" theme for the 3D laboratories (default inside a lab).
+ * Re-maps the design tokens, so every component keeps working unchanged.
+ * --------------------------------------------------------------------- */
+html:has(body.theme-light) {
+  background: #f5f7f9;
+}
+.theme-light {
+  color-scheme: light;
+  --color-ink-950: #dfe6ec;
+  --color-ink-900: #f5f7f9;
+  --color-ink-850: #ffffff;
+  --color-ink-800: #eef2f5;
+  --color-ink-700: #ffffff;
+  --color-ink-600: #e2e8f0;
+  --color-line: rgb(15 23 42 / 0.09);
+  --color-line-strong: rgb(15 23 42 / 0.18);
+  --color-cyan: #0e7490;
+  --color-cyan-soft: rgb(14 116 144 / 0.1);
+  --color-fg: #0f172a;
+  --color-fg-muted: #475569;
+  --color-fg-subtle: #64748b;
+  --shadow-panel: 0 1px 2px rgb(15 23 42 / 0.06), 0 12px 32px -12px rgb(15 23 42 / 0.22);
+  color: var(--color-fg);
+}
+.theme-light .btn-primary {
+  background: #0f172a;
+  color: #fff;
+}
+.theme-light .btn-primary:hover:not(:disabled) {
+  background: #1e293b;
+}
+.theme-light .btn-ghost,
+.theme-light .chip {
+  background: rgb(255 255 255 / 0.85);
+}
+.theme-light .btn-ghost:hover:not(:disabled) {
+  background: #fff;
+}
+.theme-light .icon-btn {
+  background: rgb(255 255 255 / 0.88);
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.06);
+}
+.theme-light .icon-btn:hover {
+  background: #fff;
+}
+.theme-light .icon-btn[aria-pressed='true'] {
+  background: #0f172a;
+  color: #fff;
+  border-color: #0f172a;
+}
+
+/* Dark studio, available as a toggle inside the labs */
+.theme-dark-lab {
+  color-scheme: dark;
+  --color-ink-950: #050c17;
+  --color-ink-900: #07111f;
+  --color-ink-850: #0a1626;
+  --color-ink-800: #13243a;
+  --color-ink-700: #13243a;
+  --color-ink-600: #1b3150;
+  --color-line: rgb(148 163 184 / 0.14);
+  --color-line-strong: rgb(148 163 184 / 0.26);
+  --color-cyan: #22d3ee;
+  --color-cyan-soft: rgb(34 211 238 / 0.12);
+  --color-fg: #f8fafc;
+  --color-fg-muted: #94a3b8;
+  --color-fg-subtle: #64748b;
+  --shadow-panel: 0 1px 0 rgb(255 255 255 / 0.03) inset, 0 20px 50px -24px rgb(0 0 0 / 0.7);
+  color: var(--color-fg);
+}
+.theme-dark-lab .btn-primary {
+  background: var(--color-cyan);
+  color: #04202a;
+}
+.theme-dark-lab .btn-ghost,
+.theme-dark-lab .chip,
+.theme-dark-lab .icon-btn {
+  background: rgb(7 17 31 / 0.72);
+  box-shadow: none;
+}
+.theme-dark-lab .icon-btn[aria-pressed='true'] {
+  background: var(--color-fg);
+  color: #07111f;
+}
+
+/* Studio backdrop behind the transparent 3D canvas */
+.lab-backdrop {
+  background: radial-gradient(ellipse 70% 85% at 50% 42%, #ffffff 0%, #eef2f6 45%, #cfd8e1 100%);
+}
+.theme-dark-lab .lab-backdrop {
+  background: radial-gradient(ellipse 70% 85% at 50% 42%, #1c2c42 0%, #0c1829 50%, #050c17 100%);
+}
+
+/* Floating glass card used by the lab UI */
+.float-card {
+  background: color-mix(in srgb, var(--color-ink-850) 86%, transparent);
+  border: 1px solid var(--color-line);
+  border-radius: 16px;
+  box-shadow: var(--shadow-panel);
+  backdrop-filter: blur(14px) saturate(1.2);
+}
+
+/* Vertical depth slider */
+.depth-range {
+  writing-mode: vertical-lr;
+  width: 28px;
+  accent-color: var(--color-fg);
+}
