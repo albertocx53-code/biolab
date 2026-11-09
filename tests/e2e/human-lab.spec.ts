@@ -9,14 +9,29 @@ test.describe('Laboratório Corpo Humano', () => {
 
   test('carrega o modelo com sistemas separados e camadas sob demanda', async ({ page }) => {
     const loaded = await page.evaluate(() => (window as any).__biolab.viewer.getState().modelState);
-    expect(loaded).toMatchObject({ esqueletico: 'ready', visceral: 'ready', coracao: 'ready', tegumentar: 'ready' });
-    expect(loaded.muscular).toBeUndefined(); // músculos só carregam quando ativados
-    await page.getByRole('switch', { name: 'Mostrar Sistema muscular' }).click();
-    await page.waitForFunction(() => (window as any).__biolab.viewer.getState().modelState.muscular === 'ready', null, { timeout: 60_000 });
-    expect(await page.evaluate(() => (window as any).__biolab.registry.size())).toBeGreaterThan(900);
+    // abre na camada muscular (como um atlas); pele e nervos só carregam quando pedidos
+    expect(loaded).toMatchObject({ esqueletico: 'ready', visceral: 'ready', coracao: 'ready', muscular: 'ready' });
+    expect(loaded.nervoso).toBeUndefined();
+    await page.getByRole('switch', { name: 'Mostrar Sistema nervoso (nervos)' }).click();
+    await page.waitForFunction(() => (window as any).__biolab.viewer.getState().modelState.nervoso === 'ready', null, { timeout: 60_000 });
+    expect(await page.evaluate(() => (window as any).__biolab.registry.size())).toBeGreaterThan(1200);
+  });
+
+  test('controle de profundidade: pele → músculos → esqueleto → órgãos', async ({ page }) => {
+    const vis = () => page.evaluate(() => { const s = (window as any).__biolab.viewer.getState(); return [s.groupVisible.tegumentar, s.groupVisible.muscular, s.groupVisible.esqueletico]; });
+    // com a pele opaca os músculos (totalmente cobertos) não são desenhados
+    await page.getByRole('button', { name: 'Pele', exact: true }).click();
+    expect(await vis()).toEqual([true, false, true]);
+    await page.getByRole('button', { name: 'Músculos', exact: true }).click();
+    expect(await vis()).toEqual([false, true, true]);
+    await page.getByRole('button', { name: 'Esqueleto', exact: true }).click();
+    expect(await vis()).toEqual([false, false, true]);
+    await page.getByRole('button', { name: 'Órgãos', exact: true }).click();
+    expect(await vis()).toEqual([false, false, false]);
   });
 
   test('clique no coração seleciona a estrutura e abre o painel científico', async ({ page }) => {
+    await page.getByRole('button', { name: 'Órgãos', exact: true }).click();
     const p = await screenPointOf(page, 'left-ventricle');
     await page.mouse.click(p.x, p.y);
     const panel = page.getByTestId('scientific-panel');
@@ -40,6 +55,9 @@ test.describe('Laboratório Corpo Humano', () => {
   });
 
   test('clique no braço abre a região e revela os ossos', async ({ page }) => {
+    await page.getByRole('button', { name: 'Pele', exact: true }).click();
+    await page.waitForFunction(() => (window as any).__biolab.viewer.getState().modelState.tegumentar === 'ready', null, { timeout: 60_000 });
+    await page.waitForTimeout(300);
     const p = await screenPointOf(page, 'humerus-dir');
     await page.mouse.click(p.x - 10, p.y);
     const region = page.getByTestId('region-panel');
@@ -57,6 +75,7 @@ test.describe('Laboratório Corpo Humano', () => {
     await page.getByRole('switch', { name: 'Ocultar Sistema esquelético' }).click();
     const visible = await page.evaluate(() => (window as any).__biolab.registry.get('humerus-dir').visible);
     expect(visible).toBe(false);
+    await page.getByRole('button', { name: 'Transparência de Sistema digestório' }).click();
     await page.getByLabel('Opacidade de Sistema digestório').fill('0.3');
     const op = await page.evaluate(() => (window as any).__biolab.registry.get('liver').material.opacity);
     expect(op).toBeCloseTo(0.3, 2);

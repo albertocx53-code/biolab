@@ -57,7 +57,7 @@ export function AccessForm({ expired }: { expired: boolean }) {
           onChange={(e) => setKey(e.target.value)}
           aria-invalid={!!error}
           aria-describedby={error ? 'access-error' : 'access-help'}
-          className="h-14 w-full bg-transparent font-mono text-[15px] tracking-wider text-fg uppercase placeholder:text-fg-subtle placeholder:normal-case focus:outline-none"
+          className="h-14 w-full bg-transparent font-mono text-[15px] tracking-wider text-fg uppercase placeholder:font-sans placeholder:tracking-normal placeholder:text-fg-subtle placeholder:normal-case focus:outline-none"
           maxLength={64}
         />
       </div>

@@ -26,12 +26,12 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
   return (
     <div className="min-h-dvh bg-ink-900">
-      <header className="border-b border-line">
+      <header className="sticky top-0 z-10 border-b border-line bg-ink-850/85 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6">
           <Logo />
           <nav className="ml-6 hidden items-center gap-1 text-sm sm:flex" aria-label="Principal">
-            <span className="rounded-md bg-white/[0.05] px-3 py-1.5 font-medium">Explorer</span>
-            <Link href="/studio" className="rounded-md px-3 py-1.5 text-fg-muted hover:text-fg">
+            <span className="rounded-full bg-ink-800 px-3 py-1.5 font-medium">Explorer</span>
+            <Link href="/studio" className="rounded-full px-3 py-1.5 text-fg-muted hover:text-fg">
               Studio
             </Link>
           </nav>
@@ -60,12 +60,12 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               <li key={lab.id}>
                 <Link
                   href={`/explorar/${lab.slug}`}
-                  className="group panel flex h-full flex-col overflow-hidden transition-[border-color,transform] duration-200 hover:-translate-y-0.5 hover:border-line-strong focus-visible:-translate-y-0.5"
+                  className="group float-card flex h-full flex-col overflow-hidden transition-[border-color,transform] duration-200 hover:-translate-y-0.5 hover:border-line-strong focus-visible:-translate-y-0.5"
                   data-testid={`lab-card-${lab.slug}`}
                 >
-                  <div className="relative h-44 overflow-hidden border-b border-line bg-ink-950" style={{ backgroundImage: `radial-gradient(circle at 50% 60%, ${lab.accent}1f, transparent 65%)` }}>
+                  <div className="relative h-48 overflow-hidden border-b border-line bg-ink-800" style={{ backgroundImage: `radial-gradient(circle at 50% 60%, ${lab.accent}1f, transparent 65%)` }}>
                     {lab.id === 'anatomia-humana' ? (
-                      <Image src="/images/card-anatomia.webp" alt="Modelo 3D do corpo humano com esqueleto e órgãos" fill sizes="(min-width:1024px) 33vw, (min-width:640px) 50vw, 100vw" className="object-cover transition-transform duration-500 group-hover:scale-[1.03]" />
+                      <Image src="/images/card-anatomia.webp" alt="Modelo 3D do corpo humano com esqueleto e órgãos" fill sizes="(min-width:1024px) 33vw, (min-width:640px) 50vw, 100vw" className="object-cover object-[center_35%] transition-transform duration-500 group-hover:scale-[1.03]" />
                     ) : (
                       <div className="absolute inset-0 p-6 opacity-90 transition-opacity group-hover:opacity-100">
                         <LabArt id={lab.id} accent={lab.accent} />
@@ -93,7 +93,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           })}
         </ul>
 
-        <section className="panel mt-10 flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
+        <section className="float-card mt-10 flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="eyebrow">BioLab 3D Studio</p>
             <p className="mt-1 text-fg-muted">

@@ -9,7 +9,14 @@ export interface MaterialSpec {
   color: string;
   roughness?: number;
   metalness?: number;
-  sheen?: boolean;
+  /** Soft velvet highlight (muscle fibres, skin). 0–1 */
+  sheen?: number;
+  sheenColor?: string;
+  /** Thin wet coat (organs, cartilage, eyes). 0–1 */
+  clearcoat?: number;
+  clearcoatRoughness?: number;
+  /** Pull an outer shell (skin) slightly towards the camera to avoid z-fighting. */
+  polygonOffset?: boolean;
 }
 
 export class MaterialLibrary {
@@ -21,8 +28,8 @@ export class MaterialLibrary {
 
   constructor(private readonly specs: Record<string, MaterialSpec>, private readonly fallback: MaterialSpec) {
     // Drawn on top of everything (x-ray style) so a selected organ stays visible behind bones.
-    this.highlight = new THREE.MeshStandardMaterial({ color: '#7DEBFA', emissive: '#22D3EE', emissiveIntensity: 0.55, roughness: 0.45, depthTest: false, transparent: true, opacity: 0.92 });
-    this.hoverMat = new THREE.MeshStandardMaterial({ color: '#BDF4FC', emissive: '#22D3EE', emissiveIntensity: 0.18, roughness: 0.5 });
+    this.highlight = new THREE.MeshStandardMaterial({ color: '#38C6E0', emissive: '#0E7490', emissiveIntensity: 0.25, roughness: 0.35, depthTest: false, transparent: true, opacity: 0.95 });
+    this.hoverMat = new THREE.MeshStandardMaterial({ color: '#A5EEF8', emissive: '#0EA5C6', emissiveIntensity: 0.15, roughness: 0.45 });
     this.ghost = new THREE.MeshStandardMaterial({ color: '#9FB3C8', transparent: true, opacity: 0.06, depthWrite: false, roughness: 0.9 });
   }
 
@@ -32,12 +39,28 @@ export class MaterialLibrary {
     let m = this.base.get(key);
     if (!m) {
       const spec = this.specs[cls] ?? this.fallback;
-      m = new THREE.MeshStandardMaterial({
+      const physical = (spec.sheen ?? 0) > 0 || (spec.clearcoat ?? 0) > 0;
+      const params = {
         color: new THREE.Color(spec.color),
         roughness: spec.roughness ?? 0.6,
         metalness: spec.metalness ?? 0,
         side: THREE.FrontSide,
-      });
+      };
+      m = physical
+        ? new THREE.MeshPhysicalMaterial({
+            ...params,
+            sheen: spec.sheen ?? 0,
+            sheenRoughness: 0.45,
+            sheenColor: new THREE.Color(spec.sheenColor ?? '#ffffff'),
+            clearcoat: spec.clearcoat ?? 0,
+            clearcoatRoughness: spec.clearcoatRoughness ?? 0.35,
+          })
+        : new THREE.MeshStandardMaterial(params);
+      if (spec.polygonOffset) {
+        m.polygonOffset = true;
+        m.polygonOffsetFactor = -2;
+        m.polygonOffsetUnits = -4;
+      }
       m.userData.group = group;
       this.base.set(key, m);
       this.applyOpacity(m, this.opacity.get(group) ?? 1);

@@ -18,17 +18,18 @@ export function ViewerToolbar() {
   const setLabels = useViewer((s) => s.setLabels);
   const anyHidden = useViewer((s) => Object.keys(s.hiddenMeshIds).length > 0 || !!s.isolatedMeshIds);
   const presentation = useViewer((s) => s.presentation);
-  const size = presentation ? 'h-12 w-12' : '';
+
+  const btn = presentation ? 'h-12 min-w-12 text-base' : 'h-9 min-w-9 text-[13px]';
 
   return (
-    <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-wrap items-end justify-between gap-2 p-3 sm:p-4">
-      <div className="pointer-events-auto flex flex-wrap items-center gap-1.5">
-        <div className="flex rounded-[11px] border border-line bg-ink-900/80 p-0.5 backdrop-blur" role="group" aria-label="Vistas da câmera">
+    <div className="pointer-events-none absolute inset-x-0 bottom-3 z-20 flex justify-center px-3 sm:bottom-4">
+      <div className="float-card pointer-events-auto flex max-w-full items-center gap-0.5 overflow-x-auto rounded-full p-1" role="toolbar" aria-label="Controles da câmera">
+        <div className="flex" role="group" aria-label="Vistas da câmera">
           {VIEWS.map((v) => (
             <button
               key={v.id}
               type="button"
-              className={`rounded-[9px] px-2.5 font-medium text-fg-muted hover:bg-white/[0.06] hover:text-fg ${presentation ? 'py-3 text-base' : 'py-2 text-xs'}`}
+              className={`rounded-full px-3 font-medium text-fg-muted hover:bg-ink-800 hover:text-fg ${btn}`}
               onClick={() => command({ type: 'view', view: v.id })}
               title={`${v.label} (${v.key})`}
             >
@@ -36,28 +37,38 @@ export function ViewerToolbar() {
             </button>
           ))}
         </div>
-        <button type="button" className={`icon-btn ${size}`} onClick={() => command({ type: 'reset' })} title="Reiniciar câmera (R)" aria-label="Reiniciar câmera">
-          <Icon name="reset" />
+        <span className="mx-1 h-5 w-px bg-line-strong" aria-hidden="true" />
+        <button type="button" className={`grid place-items-center rounded-full text-fg-muted hover:bg-ink-800 hover:text-fg ${btn}`} onClick={() => command({ type: 'reset' })} title="Reiniciar câmera (R)" aria-label="Reiniciar câmera">
+          <Icon name="reset" size={17} />
         </button>
-        <button type="button" className={`icon-btn ${size}`} aria-pressed={labels} onClick={() => setLabels(!labels)} title="Rótulos (L)" aria-label="Mostrar rótulos">
-          <span className="text-[13px] font-bold">Aa</span>
+        <button
+          type="button"
+          className={`grid place-items-center rounded-full font-bold ${btn} ${labels ? 'bg-fg text-ink-900' : 'text-fg-muted hover:bg-ink-800 hover:text-fg'}`}
+          aria-pressed={labels}
+          onClick={() => setLabels(!labels)}
+          title="Rótulos (L)"
+          aria-label="Mostrar rótulos"
+        >
+          Aa
         </button>
-        {anyHidden && (
-          <button type="button" className="btn btn-ghost h-10 bg-ink-900/80 text-xs" onClick={showAll} title="Mostrar tudo (A)">
-            <Icon name="eye" size={15} /> Mostrar tudo
-          </button>
-        )}
-      </div>
-      <div className="pointer-events-auto flex items-center gap-1.5">
-        <button type="button" className={`icon-btn ${size}`} onClick={() => command({ type: 'zoom', factor: 1 / 1.25 })} aria-label="Afastar" title="Afastar (−)">
-          <Icon name="zoomOut" />
+        <span className="mx-1 h-5 w-px bg-line-strong" aria-hidden="true" />
+        <button type="button" className={`grid place-items-center rounded-full text-fg-muted hover:bg-ink-800 hover:text-fg ${btn}`} onClick={() => command({ type: 'zoom', factor: 1 / 1.25 })} aria-label="Afastar" title="Afastar (−)">
+          <Icon name="zoomOut" size={17} />
         </button>
-        <span className="grid h-10 min-w-16 place-items-center rounded-[10px] border border-line bg-ink-900/80 px-2 text-sm tabular-nums" aria-live="polite" aria-label="Nível de zoom">
+        <span className="min-w-12 text-center text-[13px] text-fg-muted tabular-nums" aria-live="polite" aria-label="Nível de zoom">
           {zoom}%
         </span>
-        <button type="button" className={`icon-btn ${size}`} onClick={() => command({ type: 'zoom', factor: 1.25 })} aria-label="Aproximar" title="Aproximar (+)">
-          <Icon name="zoomIn" />
+        <button type="button" className={`grid place-items-center rounded-full text-fg-muted hover:bg-ink-800 hover:text-fg ${btn}`} onClick={() => command({ type: 'zoom', factor: 1.25 })} aria-label="Aproximar" title="Aproximar (+)">
+          <Icon name="zoomIn" size={17} />
         </button>
+        {anyHidden && (
+          <>
+            <span className="mx-1 h-5 w-px bg-line-strong" aria-hidden="true" />
+            <button type="button" className={`flex items-center gap-1.5 rounded-full px-3 font-medium text-fg hover:bg-ink-800 ${btn}`} onClick={showAll} title="Mostrar tudo (A)">
+              <Icon name="eye" size={15} /> Mostrar tudo
+            </button>
+          </>
+        )}
       </div>
     </div>
   );

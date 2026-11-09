@@ -11,12 +11,12 @@ export function QualityMenu() {
   const [open, setOpen] = useState(false);
   return (
     <div className="relative">
-      <button type="button" className="btn btn-ghost h-10" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-haspopup="menu">
+      <button type="button" className="btn btn-ghost h-10 rounded-full" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-haspopup="menu">
         <Icon name="settings" size={16} />
         <span className="hidden md:inline">{QUALITY[quality].label}</span>
       </button>
       {open && (
-        <div role="menu" className="panel absolute right-0 z-50 mt-2 w-72 p-1.5" onMouseLeave={() => setOpen(false)}>
+        <div role="menu" className="float-card absolute right-0 z-50 mt-2 w-72 p-1.5" onMouseLeave={() => setOpen(false)}>
           <p className="eyebrow px-2.5 pt-1.5 pb-2">Qualidade gráfica</p>
           {(Object.keys(QUALITY) as QualityProfile[]).map((q) => (
             <button

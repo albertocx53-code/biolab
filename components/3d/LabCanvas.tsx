@@ -2,6 +2,7 @@
 
 import { Canvas } from '@react-three/fiber';
 import { AdaptiveDpr, Environment, Lightformer, PerformanceMonitor } from '@react-three/drei';
+import { EffectComposer, N8AO } from '@react-three/postprocessing';
 import { Suspense, useEffect, useState, type ReactNode } from 'react';
 import * as THREE from 'three';
 import { QUALITY } from '@/engine/performance/quality';
@@ -14,13 +15,15 @@ interface Props {
   cameraPreset: CameraPreset;
   onPointerMissed?: () => void;
   onContextLost?: () => void;
+  /** Dark studio instead of the default light atlas backdrop. */
+  dark?: boolean;
 }
 
 /**
  * Shared WebGL canvas for every laboratory: quality profile, lighting,
  * adaptive resolution, BVH-accelerated raycasting and context-loss recovery.
  */
-export function LabCanvas({ children, cameraPreset, onPointerMissed, onContextLost }: Props) {
+export function LabCanvas({ children, cameraPreset, onPointerMissed, onContextLost, dark = false }: Props) {
   const quality = useViewer((s) => s.quality);
   const q = QUALITY[quality];
   const [dprCap, setDprCap] = useState(q.dpr[1]);
@@ -53,7 +56,7 @@ export function LabCanvas({ children, cameraPreset, onPointerMissed, onContextLo
     <Canvas
       key={`${canvasKey}-${q.antialias}`}
       dpr={[q.dpr[0], dprCap]}
-      gl={{ antialias: q.antialias, powerPreference: 'high-performance', alpha: false, preserveDrawingBuffer: false }}
+      gl={{ antialias: q.antialias && !q.ao, powerPreference: 'high-performance', alpha: true, preserveDrawingBuffer: false }}
       camera={{ fov: 32, near: 0.01, far: 50, position: cameraPreset.position }}
       frameloop="demand"
       onPointerMissed={(e) => {
@@ -61,8 +64,8 @@ export function LabCanvas({ children, cameraPreset, onPointerMissed, onContextLo
       }}
       onCreated={({ gl }) => {
         gl.toneMapping = THREE.ACESFilmicToneMapping;
-        gl.toneMappingExposure = 1.05;
-        gl.setClearColor('#07111F');
+        gl.toneMappingExposure = 1.0;
+        gl.setClearColor(0x000000, 0); // transparent: the CSS studio backdrop shows through
         const canvas = gl.domElement;
         canvas.addEventListener('webglcontextlost', (ev) => {
           ev.preventDefault();
@@ -72,20 +75,26 @@ export function LabCanvas({ children, cameraPreset, onPointerMissed, onContextLo
       }}
       data-testid="lab-canvas"
     >
-      <color attach="background" args={['#07111F']} />
-      <hemisphereLight args={['#dbeafe', '#0b1626', 0.9]} />
-      <directionalLight position={[2.5, 4, 3]} intensity={1.6} />
-      <directionalLight position={[-3, 2, -2]} intensity={0.55} color="#93c5fd" />
-      <directionalLight position={[0, -2, 3]} intensity={0.25} />
+      {/* Studio lighting: soft key from the front-top, cool fill, warm rim. */}
+      <hemisphereLight args={[dark ? '#dbeafe' : '#ffffff', dark ? '#0b1626' : '#b8c2cc', dark ? 0.7 : 0.85]} />
+      <directionalLight position={[1.8, 3.5, 4]} intensity={dark ? 1.6 : 1.9} />
+      <directionalLight position={[-3, 1.6, 1.5]} intensity={0.55} color="#dbe8ff" />
+      <directionalLight position={[0, 2.5, -4]} intensity={dark ? 1.1 : 0.9} color="#fff1e6" />
       {q.environment && (
-        // Procedural studio lighting: no HDR download, no external requests.
+        // Procedural studio reflections: no HDR download, no external requests.
         <Suspense fallback={null}>
-          <Environment resolution={64} environmentIntensity={0.45}>
-            <Lightformer form="rect" intensity={2.2} position={[0, 3, 3]} scale={[4, 2, 1]} />
-            <Lightformer form="rect" intensity={1.2} color="#bae6fd" position={[-4, 1, -1]} rotation-y={Math.PI / 2} scale={[3, 3, 1]} />
-            <Lightformer form="rect" intensity={0.8} position={[4, 1, 1]} rotation-y={-Math.PI / 2} scale={[3, 3, 1]} />
+          <Environment resolution={64} environmentIntensity={dark ? 0.5 : 0.65}>
+            <Lightformer form="rect" intensity={2.4} position={[0, 3, 3.5]} scale={[5, 2.5, 1]} />
+            <Lightformer form="rect" intensity={1.1} color="#dbeafe" position={[-4, 1.2, 0]} rotation-y={Math.PI / 2} scale={[3, 4, 1]} />
+            <Lightformer form="rect" intensity={1.1} position={[4, 1.2, 0.5]} rotation-y={-Math.PI / 2} scale={[3, 4, 1]} />
+            <Lightformer form="rect" intensity={0.9} color="#fff1e6" position={[0, 1.5, -4]} rotation-y={Math.PI} scale={[4, 3, 1]} />
           </Environment>
         </Suspense>
+      )}
+      {q.ao && (
+        <EffectComposer multisampling={4} enableNormalPass={false}>
+          <N8AO aoRadius={0.06} distanceFalloff={0.6} intensity={dark ? 2.2 : 2.6} quality="medium" halfRes />
+        </EffectComposer>
       )}
       {q.adaptive && (
         <PerformanceMonitor
