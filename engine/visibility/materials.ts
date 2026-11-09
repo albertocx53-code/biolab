@@ -17,6 +17,10 @@ export interface MaterialSpec {
   clearcoatRoughness?: number;
   /** Pull an outer shell (skin) slightly towards the camera to avoid z-fighting. */
   polygonOffset?: boolean;
+  /** Render both faces (open, cut-away shells). */
+  doubleSide?: boolean;
+  /** Use per-vertex colours baked into the geometry (multi-tone merged meshes). */
+  vertexColors?: boolean;
 }
 
 export class MaterialLibrary {
@@ -28,8 +32,8 @@ export class MaterialLibrary {
 
   constructor(private readonly specs: Record<string, MaterialSpec>, private readonly fallback: MaterialSpec) {
     // Drawn on top of everything (x-ray style) so a selected organ stays visible behind bones.
-    this.highlight = new THREE.MeshStandardMaterial({ color: '#38C6E0', emissive: '#0E7490', emissiveIntensity: 0.25, roughness: 0.35, depthTest: false, transparent: true, opacity: 0.95 });
-    this.hoverMat = new THREE.MeshStandardMaterial({ color: '#A5EEF8', emissive: '#0EA5C6', emissiveIntensity: 0.15, roughness: 0.45 });
+    this.highlight = new THREE.MeshStandardMaterial({ color: '#38C6E0', emissive: '#0E7490', emissiveIntensity: 0.25, roughness: 0.35, depthTest: false, transparent: true, opacity: 0.95, side: THREE.DoubleSide });
+    this.hoverMat = new THREE.MeshStandardMaterial({ color: '#A5EEF8', emissive: '#0EA5C6', emissiveIntensity: 0.15, roughness: 0.45, side: THREE.DoubleSide });
     this.ghost = new THREE.MeshStandardMaterial({ color: '#9FB3C8', transparent: true, opacity: 0.06, depthWrite: false, roughness: 0.9 });
   }
 
@@ -44,7 +48,8 @@ export class MaterialLibrary {
         color: new THREE.Color(spec.color),
         roughness: spec.roughness ?? 0.6,
         metalness: spec.metalness ?? 0,
-        side: THREE.FrontSide,
+        side: spec.doubleSide ? THREE.DoubleSide : THREE.FrontSide,
+        vertexColors: !!spec.vertexColors,
       };
       m = physical
         ? new THREE.MeshPhysicalMaterial({
