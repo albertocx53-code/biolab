@@ -10,6 +10,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { z } from 'zod';
 import { TIERS } from '@/lib/permissions/tiers';
+import { FixedKeyStore, fixedKeys } from './fixed-keys';
 
 export const DeviceSchema = z.object({
   id: z.string(), // hashed device identifier
@@ -137,6 +138,7 @@ export class EnvKeyStore implements KeyStore {
 
 let singleton: KeyStore | null = null;
 export function getKeyStore(): KeyStore {
+  if (!singleton && fixedKeys()) singleton = new FixedKeyStore();
   if (!singleton && process.env.BIOLAB_KEYS) singleton = new EnvKeyStore(process.env.BIOLAB_KEYS);
   if (!singleton) {
     const file = process.env.BIOLAB_KEYSTORE_PATH || path.join(process.cwd(), '.data', 'keys.json');

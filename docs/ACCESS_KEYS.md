@@ -20,7 +20,20 @@ código: toda chave é gerada pelo CLI administrativo.
 - Para produção com várias instâncias: implementar `KeyStore` sobre Postgres/Supabase usando
   [`docs/db/001_access_keys.sql`](db/001_access_keys.sql).
 
-## Na Vercel (hoje)
+## Modo em uso: uma chave fixa por plano
+
+Decisão do dono do projeto (09/11/2026): em vez de uma chave por comprador, existe **uma chave
+única para o Plano Básico e outra para o Plano Completo**. Elas ficam nas variáveis de ambiente
+`BIOLAB_KEY_BASICO` e `BIOLAB_KEY_COMPLETO` do servidor (Vercel), nunca no código do navegador.
+O servidor compara a chave digitada (sem diferenciar maiúsculas, espaços e hífens) e emite a
+sessão assinada com o plano certo, então quem tem a chave Básico não entra no Studio.
+
+- Não precisa de outros segredos: com essas duas variáveis, os segredos de sessão são derivados delas.
+- Para trocar uma chave: altere a variável na Vercel e publique de novo. Todos precisam entrar de novo.
+- Quem tiver a chave pode repassá-la; não há limite de aparelhos nesse modo.
+- Se as duas variáveis não existirem, o sistema volta ao modo de chaves individuais descrito abaixo.
+
+## Chaves individuais em variável de ambiente (alternativa)
 
 A Vercel não guarda arquivos entre requisições, então lá as chaves vêm da variável de ambiente
 `BIOLAB_KEYS` (`EnvKeyStore`, somente leitura). Ela contém só os hashes, nunca as chaves.
