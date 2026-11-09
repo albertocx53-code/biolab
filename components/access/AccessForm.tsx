@@ -52,7 +52,7 @@ export function AccessForm({ expired }: { expired: boolean }) {
           autoCapitalize="characters"
           spellCheck={false}
           inputMode="text"
-          placeholder="BIO3D-XXXXX-XXXXX-XXXXX-XXXXX"
+          placeholder="Digite sua chave de acesso"
           value={key}
           onChange={(e) => setKey(e.target.value)}
           aria-invalid={!!error}

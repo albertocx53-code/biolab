@@ -8,6 +8,11 @@ const DEV_FALLBACK = 'biolab-dev-only-secret-do-not-use-in-production-0000';
 function read(name: string): string {
   const v = process.env[name];
   if (v && v.length >= 32) return v;
+  // Fixed-key mode: derive the server secrets from the two plan keys so the
+  // owner only has to set those (changing a key also signs everyone out).
+  const b = process.env.BIOLAB_KEY_BASICO?.trim();
+  const c = process.env.BIOLAB_KEY_COMPLETO?.trim();
+  if (b && c) return `biolab-fixed-v1:${name}:${b}:${c}`;
   if (process.env.NODE_ENV === 'production' && process.env.BIOLAB_ALLOW_DEV_SECRETS !== '1') {
     throw new Error(`${name} ausente ou curto demais (mínimo 32 caracteres).`);
   }

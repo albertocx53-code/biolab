@@ -6,6 +6,7 @@ import 'server-only';
 import { authConfig } from './config';
 import { generateAccessKey, hashAccessKey, keyHint, normalizeAccessKey } from './keys';
 import { getKeyStore, type KeyRecord } from './store';
+import { fixedKeys, fixedRecord, tierForFixedKey } from './fixed-keys';
 import { randomBytes, toHex, hmacSha256 } from './crypto';
 import type { Tier } from '@/lib/permissions/tiers';
 
@@ -24,6 +25,11 @@ export function isRecordActive(r: KeyRecord, now = new Date()): boolean {
 }
 
 export async function validateAccessKey(input: string, deviceId: string, now = new Date()): Promise<ValidationResult> {
+  const fixed = fixedKeys();
+  if (fixed) {
+    const tier = tierForFixedKey(input, fixed);
+    return tier ? { ok: true, record: fixedRecord(tier) } : { ok: false, reason: 'invalida' };
+  }
   const normalized = normalizeAccessKey(input);
   if (!normalized) return { ok: false, reason: 'formato' };
   const store = getKeyStore();
@@ -83,7 +89,7 @@ export async function revokeAccessKey(id: string): Promise<KeyRecord | null> {
 
 export const ERROR_MESSAGES: Record<Exclude<ValidationResult, { ok: true }>['reason'] | 'limite-tentativas' | 'erro', string> = {
   formato: 'O formato da chave não é válido. Ela tem o formato BIO3D-XXXXX-XXXXX-XXXXX-XXXXX.',
-  invalida: 'Não encontramos essa chave. Confira se ela foi digitada exatamente como no e-mail de compra.',
+  invalida: 'Não encontramos essa chave. Confira se ela foi digitada corretamente.',
   revogada: 'Esta chave foi desativada. Se você acredita que é um engano, fale com o suporte.',
   expirada: 'Esta chave expirou. Fale com o suporte para renovar seu acesso.',
   'limite-dispositivos': 'Esta chave já foi ativada no número máximo de dispositivos permitido. Fale com o suporte para liberar um novo dispositivo.',
