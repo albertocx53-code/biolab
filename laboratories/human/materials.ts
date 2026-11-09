@@ -1,0 +1,37 @@
+import type { MaterialSpec } from '@/engine/visibility/materials';
+
+/** Restrained, textbook-consistent colour coding for the human model. */
+export const HUMAN_MATERIALS: Record<string, MaterialSpec> = {
+  pele: { color: '#E2B59C', roughness: 0.7 },
+  osso: { color: '#E9DFCB', roughness: 0.62 },
+  dente: { color: '#F4F1EA', roughness: 0.35 },
+  cartilagem: { color: '#B9D3DD', roughness: 0.45 },
+  musculo: { color: '#B24A42', roughness: 0.55 },
+  tendao: { color: '#E4D9C7', roughness: 0.5 },
+  ligamento: { color: '#D8CDB8', roughness: 0.55 },
+  fascia: { color: '#D9C7B3', roughness: 0.6 },
+  bursa: { color: '#C9D7E4', roughness: 0.4 },
+  miocardio: { color: '#B5382F', roughness: 0.5 },
+  valva: { color: '#EBD2B8', roughness: 0.5 },
+  arteria: { color: '#C93A32', roughness: 0.45 },
+  veia: { color: '#3460B0', roughness: 0.45 },
+  nervo: { color: '#E9C84E', roughness: 0.5 },
+  olho: { color: '#E8EEF2', roughness: 0.3 },
+  medula: { color: '#EDE3D3', roughness: 0.55 },
+  glandula: { color: '#D2A25E', roughness: 0.55 },
+  mucosa: { color: '#D98C88', roughness: 0.5 },
+  'tecido-conjuntivo': { color: '#D8CDB8', roughness: 0.55 },
+  pulmao: { color: '#DE9C9A', roughness: 0.6 },
+  membrana: { color: '#E8B9B5', roughness: 0.6 },
+  'via-aerea': { color: '#C9DCE4', roughness: 0.45 },
+  figado: { color: '#8C3A2E', roughness: 0.5 },
+  ducto: { color: '#7FAF6A', roughness: 0.5 },
+  intestino: { color: '#D9A08A', roughness: 0.55 },
+  'orgao-digestorio': { color: '#D4877A', roughness: 0.5 },
+  urinario: { color: '#D9B46A', roughness: 0.5 },
+  reprodutor: { color: '#D68E99', roughness: 0.5 },
+  'glandula-endocrina': { color: '#B58BDB', roughness: 0.5 },
+  'orgao-linfoide': { color: '#7B3B4A', roughness: 0.5 },
+  linfonodo: { color: '#69C495', roughness: 0.5 },
+};
+export const HUMAN_FALLBACK: MaterialSpec = { color: '#C8CED6', roughness: 0.6 };
