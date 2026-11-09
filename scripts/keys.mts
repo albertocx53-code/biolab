@@ -4,6 +4,7 @@
  *   npm run keys:create -- --tier basico|completo [--label "Escola X"] [--max-devices 3|0] [--expires 2027-12-31]
  *   npm run keys:list
  *   npm run keys:revoke -- <key_id>
+ *   npm run keys:export            (valor para BIOLAB_KEYS na Vercel)
  *
  * --max-devices 0 means unlimited. The plaintext key is printed ONCE.
  */
@@ -37,6 +38,10 @@ if (cmd === 'create') {
   const id = process.argv[3];
   const r = id ? await revokeAccessKey(id) : null;
   console.log(r ? `Chave ${r.id} revogada em ${r.revokedAt}` : 'Chave não encontrada');
+} else if (cmd === 'export') {
+  // Value for the BIOLAB_KEYS env var on serverless hosts (Vercel). Contains only hashes.
+  const keys = (await getKeyStore().list()).map((k) => ({ ...k, devices: [] }));
+  console.log(Buffer.from(JSON.stringify({ version: 1, keys })).toString('base64'));
 } else {
-  console.log('Uso: keys.ts create|list|revoke');
+  console.log('Uso: keys.ts create|list|revoke|export');
 }

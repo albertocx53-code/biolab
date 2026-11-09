@@ -101,8 +101,43 @@ export class FileKeyStore implements KeyStore {
   }
 }
 
+/**
+ * Read-only store loaded from the BIOLAB_KEYS environment variable (base64 of the
+ * same JSON as the file store, produced by `npm run keys:export`). Used on
+ * serverless hosts such as Vercel, where the filesystem is not persistent.
+ * Limitations: new keys and revocations need an env update + redeploy, and
+ * device registrations live only in the memory of each server instance, so the
+ * device limit is not enforced. A database store replaces this (ACCESS_KEYS.md).
+ */
+export class EnvKeyStore implements KeyStore {
+  private readonly keys: KeyRecord[];
+  constructor(encoded: string) {
+    const json = encoded.trim().startsWith('{') ? encoded : Buffer.from(encoded, 'base64').toString('utf8');
+    this.keys = FileSchema.parse(JSON.parse(json)).keys;
+  }
+  async findByHash(hash: string) {
+    return this.keys.find((k) => k.hash === hash) ?? null;
+  }
+  async findById(id: string) {
+    return this.keys.find((k) => k.id === id) ?? null;
+  }
+  async list() {
+    return [...this.keys];
+  }
+  async insert(): Promise<void> {
+    throw new Error('BIOLAB_KEYS é somente leitura: crie a chave com o CLI e atualize a variável (npm run keys:export).');
+  }
+  async update(id: string, patch: (r: KeyRecord) => KeyRecord) {
+    const i = this.keys.findIndex((k) => k.id === id);
+    if (i < 0) return null;
+    this.keys[i] = KeyRecordSchema.parse(patch(this.keys[i]));
+    return this.keys[i];
+  }
+}
+
 let singleton: KeyStore | null = null;
 export function getKeyStore(): KeyStore {
+  if (!singleton && process.env.BIOLAB_KEYS) singleton = new EnvKeyStore(process.env.BIOLAB_KEYS);
   if (!singleton) {
     const file = process.env.BIOLAB_KEYSTORE_PATH || path.join(process.cwd(), '.data', 'keys.json');
     singleton = new FileKeyStore(path.resolve(file));
