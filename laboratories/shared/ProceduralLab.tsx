@@ -26,7 +26,7 @@ import type { BuiltModel, MeshDef } from './types';
 import { ProceduralModelView } from './ProceduralModelView';
 import { ProcessDriver } from './ProcessDriver';
 import { ProcessPlayer } from './ProcessPlayer';
-import { useProcess, type LabProcess } from './process';
+import { processClock, useProcess, type LabProcess } from './process';
 
 const THEME_KEY = 'biolab.labTheme';
 
@@ -147,7 +147,7 @@ export function ProceduralLab({ config: cfg, canUseStudio, tierLabel }: { config
   // ---- bootstrap
   useEffect(() => {
     const w = window as unknown as { __biolab?: Record<string, unknown> };
-    w.__biolab = { ...(w.__biolab ?? {}), registry: meshRegistry, viewer: useViewer, process: useProcess };
+    w.__biolab = { ...(w.__biolab ?? {}), registry: meshRegistry, viewer: useViewer, process: useProcess, clock: processClock };
     setWebgl(isWebGLAvailable());
     try {
       setDark(localStorage.getItem(THEME_KEY) === 'dark');
@@ -354,9 +354,11 @@ export function ProceduralLab({ config: cfg, canUseStudio, tierLabel }: { config
     });
 
   const primaryKind = cfg.modelRows[0].kind;
-  const detailModel = selected ? catalog.models.find((m) => m.detailOf === selected.id && m.id !== modelId) : undefined;
+  const detailModel = selected
+    ? catalog.models.find((m) => m.id !== modelId && m.detailOf && (m.detailOf === selected.id || m.detailOf === selected.parentStructureId))
+    : undefined;
   const relatedProcesses = selected ? info.processes.filter((p) => processes[p].structures.includes(selected.id) || processes[p].structures.includes(selected.parentStructureId ?? '')) : [];
-  const parentModel = info.detailOf ? catalog.models.find((m) => m.kind === primaryKind && m.structures.includes(info.detailOf!)) : undefined;
+  const parentModel = info.detailOf ? catalog.modelsShowing(info.detailOf).find((m) => m.kind === primaryKind && m.id !== modelId && !m.detailOf) : undefined;
   const labelMeshes = selected ? (focusMesh && selected.modelMeshIds.includes(focusMesh) ? [focusMesh] : selected.modelMeshIds) : [];
   const fact = selected ? CONTENT[selected.id]?.size : undefined;
 

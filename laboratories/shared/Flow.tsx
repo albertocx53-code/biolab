@@ -7,8 +7,12 @@ import * as THREE from 'three';
 // ------------------------------------------------------------------ particles
 
 export interface FlowSpec {
-  from: THREE.Vector3[];
-  to: THREE.Vector3[];
+  from?: THREE.Vector3[];
+  to?: THREE.Vector3[];
+  /** Polylines followed by the particles instead of from → to (e.g. up a stem). */
+  paths?: THREE.Vector3[][];
+  /** Random offset of each particle (default 0.12). */
+  jitter?: number;
   color: string;
   count: number;
   size: number;
@@ -25,13 +29,14 @@ export function Flow({ spec, active }: { spec: FlowSpec; active: boolean }) {
   const seeds = useMemo(
     () =>
       Array.from({ length: spec.count }, (_, i) => ({
-        a: i % spec.from.length,
-        b: (i * 7 + 3) % spec.to.length,
+        a: i % (spec.from?.length || 1),
+        b: (i * 7 + 3) % (spec.to?.length || 1),
         phase: i / spec.count + Math.random() * 0.05,
-        jitter: new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(0.12),
+        jitter: new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(spec.jitter ?? 0.12),
       })),
     [spec],
   );
+  const curves = useMemo(() => spec.paths?.map((pts) => new THREE.CatmullRomCurve3(pts, false, 'centripetal')), [spec]);
   const geo = useMemo(() => new THREE.IcosahedronGeometry(1, 1), []);
   const mat = useMemo(() => new THREE.MeshStandardMaterial({ color: spec.color, emissive: spec.color, emissiveIntensity: 0.55, roughness: 0.4, transparent: true, depthWrite: false }), [spec.color]);
   useEffect(
@@ -55,11 +60,15 @@ export function Flow({ spec, active }: { spec: FlowSpec; active: boolean }) {
     const time = state.clock.elapsedTime;
     seeds.forEach((sd, i) => {
       const u = (time / spec.trip + sd.phase) % 1;
-      const a = spec.from[sd.a];
-      const b = spec.to[sd.b];
-      p.copy(a).lerp(b, u).add(sd.jitter);
-      const arc = (spec.arc ?? 0.15) * a.distanceTo(b) * Math.sin(Math.PI * u);
-      p.y += arc;
+      if (curves) {
+        curves[i % curves.length].getPointAt(u, p).add(sd.jitter);
+      } else {
+        const a = spec.from![sd.a];
+        const b = spec.to![sd.b];
+        p.copy(a).lerp(b, u).add(sd.jitter);
+        const arc = (spec.arc ?? 0.15) * a.distanceTo(b) * Math.sin(Math.PI * u);
+        p.y += arc;
+      }
       const k = spec.size * Math.min(1, Math.sin(Math.PI * u) * 3);
       s.setScalar(Math.max(k, 1e-4));
       m.compose(p, q, s);

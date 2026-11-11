@@ -9,8 +9,9 @@ test('painel mostra os seis laboratórios com status honesto', async ({ page }) 
   for (const t of ['Corpo Humano', 'Plantas', 'Animais', 'Células', 'Genética', 'Microrganismos']) await expect(page.getByRole('heading', { name: t })).toBeVisible();
   await expect(page.getByTestId('lab-card-corpo-humano')).toContainText('Disponível');
   await expect(page.getByTestId('lab-card-celulas')).toContainText('Disponível');
-  await expect(page.getByTestId('lab-card-plantas')).toContainText('Em breve');
-  await page.getByTestId('lab-card-plantas').click();
+  await expect(page.getByTestId('lab-card-plantas')).toContainText('Disponível');
+  await expect(page.getByTestId('lab-card-animais')).toContainText('Em breve');
+  await page.getByTestId('lab-card-animais').click();
   await expect(page.getByText('Este laboratório está em desenvolvimento')).toBeVisible();
 });
 
@@ -34,4 +35,11 @@ test('o Studio também recebe temas do laboratório de Células', async ({ page 
   await page.goto('/studio?v=1&lab=celulas&estrutura=mitocondria');
   await expect(page.getByTestId('studio-topic')).toContainText('Mitocôndria');
   await expect(page.getByTestId('studio-topic')).toContainText('Respiração celular');
+});
+
+test('o Studio também recebe temas do laboratório de Plantas', async ({ page }) => {
+  await login(page, 'completo');
+  await page.goto('/studio?v=1&lab=plantas&estrutura=xilema');
+  await expect(page.getByTestId('studio-topic')).toContainText('Xilema');
+  await expect(page.getByTestId('studio-topic')).toContainText('Seiva bruta');
 });

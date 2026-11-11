@@ -8,6 +8,7 @@ import path from 'node:path';
 import type { Structure } from '@/data/biology/schema';
 import type { StudioTopicRef } from '@/data/studio/contract';
 import { cellStructure } from '@/laboratories/cells/catalog';
+import { plantStructure } from '@/laboratories/plants/catalog';
 import { buildHumanIndex, type HumanIndex, type RawHumanCatalog } from '@/laboratories/human/catalog';
 
 let human: Promise<HumanIndex> | null = null;
@@ -23,5 +24,6 @@ export async function resolveTopic(ref: StudioTopicRef): Promise<Structure | nul
     return (await humanIndex()).structures.get(ref.structureId) ?? null;
   }
   if (ref.laboratoryId === 'celulas') return cellStructure(ref.structureId) ?? null;
+  if (ref.laboratoryId === 'plantas') return plantStructure(ref.structureId) ?? null;
   return null; // other laboratories: catalogs arrive with their phases
 }

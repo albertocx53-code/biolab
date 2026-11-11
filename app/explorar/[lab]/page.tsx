@@ -6,6 +6,7 @@ import { can, TIER_LABEL } from '@/lib/permissions/tiers';
 import { labBySlug } from '@/data/biology/laboratories';
 import HumanLabLoader from '@/laboratories/human/HumanLabLoader';
 import CellLabLoader from '@/laboratories/cells/CellLabLoader';
+import PlantLabLoader from '@/laboratories/plants/PlantLabLoader';
 import { LabArt } from '@/components/dashboard/LabArt';
 import { Logo } from '@/components/ui/Logo';
 import { Icon } from '@/components/ui/Icon';
@@ -29,6 +30,10 @@ export default async function LabPage({ params }: { params: Promise<{ lab: strin
 
   if (lab.id === 'celulas') {
     return <CellLabLoader canUseStudio={can(session.tier, 'studio.access')} tierLabel={TIER_LABEL[session.tier]} />;
+  }
+
+  if (lab.id === 'plantas') {
+    return <PlantLabLoader canUseStudio={can(session.tier, 'studio.access')} tierLabel={TIER_LABEL[session.tier]} />;
   }
 
   // Foundations for the remaining laboratories: honest status, planned scope.
