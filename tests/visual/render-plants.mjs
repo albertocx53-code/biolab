@@ -5,13 +5,13 @@ const BASE = process.env.BASE ?? 'http://localhost:3400';
 const out = process.argv[2] ?? 'public/images';
 const b = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 const p = await b.newPage({ viewport: { width: 640, height: 400 }, deviceScaleFactor: 2 });
-await p.addInitScript(() => localStorage.setItem('biolab.quality', 'alta'));
+await p.addInitScript(() => localStorage.setItem('biolab.quality', 'equilibrado'));
 await p.request.post(BASE + '/api/access', { data: { key: process.env.KEY } });
 await p.goto(BASE + '/explorar/plantas?modelo=planta');
 await p.waitForFunction(() => window.__biolab?.registry?.size() > 5 && window.__biolab.three, null, { timeout: 240000 });
 await p.evaluate(() => {
   window.__biolab.viewer.getState().setLabels(false);
-  window.__biolab.three().controls.setLookAt(4.4, 2.6, 7.3, 0, 0.95, 0, false);
+  window.__biolab.three().controls.setLookAt(5.6, 2.4, 9.4, 0, 0.75, 0, false);
   window.__biolab.three().invalidate();
 });
 await p.keyboard.press('h');
