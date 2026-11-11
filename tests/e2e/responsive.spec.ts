@@ -13,3 +13,15 @@ test('layout em celular: entrada, painel e laboratório sem rolagem horizontal',
   await page.getByRole('button', { name: 'Camadas' }).click();
   await expect(page.getByTestId('layers-panel')).toBeVisible();
 });
+
+test('laboratório de Células em celular: sem rolagem horizontal e menu de modelos', async ({ page }) => {
+  await login(page, 'basico');
+  await page.goto('/explorar/celulas');
+  await expect(page.getByRole('button', { name: 'Modelos' })).toBeVisible({ timeout: 60_000 });
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  expect(overflow).toBeLessThanOrEqual(1);
+  await page.getByRole('button', { name: 'Modelos' }).click();
+  await expect(page.getByTestId('cell-model-title')).toBeVisible();
+  await page.getByRole('radio', { name: 'Vegetal' }).click();
+  await expect(page.getByTestId('cell-model-title')).toHaveText('Célula vegetal');
+});

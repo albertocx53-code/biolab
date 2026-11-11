@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import type { Structure } from '@/data/biology/schema';
 import { studioUrl } from '@/data/studio/contract';
 import { useViewer } from '@/engine/store';
@@ -15,9 +16,13 @@ interface Props {
   onClose: () => void;
   representation: string;
   educational: string | null;
+  /** Short facts shown as a key/value list (e.g. real size of an out-of-scale model). */
+  facts?: { label: string; value: string }[];
+  /** Extra lab-specific actions shown under the description. */
+  extra?: ReactNode;
 }
 
-export function ScientificPanel({ structure: s, getStructure, systemNote, canUseStudio, onSelect, onClose, representation, educational }: Props) {
+export function ScientificPanel({ structure: s, getStructure, systemNote, canUseStudio, onSelect, onClose, representation, educational, facts, extra }: Props) {
   const command = useViewer((st) => st.command);
   const isolate = useViewer((st) => st.isolate);
   const isolated = useViewer((st) => st.isolatedMeshIds);
@@ -105,6 +110,17 @@ export function ScientificPanel({ structure: s, getStructure, systemNote, canUse
             </p>
           </section>
         )}
+        {facts && facts.length > 0 && (
+          <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-lg border border-line p-3 text-sm" data-testid="structure-facts">
+            {facts.map((f) => (
+              <div key={f.label} className="contents">
+                <dt className="text-fg-subtle">{f.label}</dt>
+                <dd className="text-fg">{f.value}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+        {extra}
         {educational && (
           <section className="rounded-lg border border-cyan/20 bg-cyan-soft p-3.5">
             <h3 className="eyebrow mb-1.5 text-cyan">Para a aula</h3>

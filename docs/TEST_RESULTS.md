@@ -1,12 +1,12 @@
 # Resultados dos testes
 
-Última execução: 09/11/2026, contêiner Linux, Node 22, Chromium 1.63 (Playwright) com SwiftShader.
+Última execução: 11/11/2026, contêiner Linux, Node 22, Chromium 1.63 (Playwright) com SwiftShader.
 
 | Suíte | Comando | Resultado |
 |---|---|---|
 | TypeScript | `npm run typecheck` | sem erros |
-| Unitários (Vitest) | `npm test` | **27 passando** |
-| Navegador (Playwright, build de produção) | `npm run test:e2e` | **19 passando** (≈50 s) |
+| Unitários (Vitest) | `npm test` | **41 passando** |
+| Navegador (Playwright, build de produção) | `npm run test:e2e` | **30 passando** (≈3 min) |
 
 ## O que é coberto
 
@@ -25,7 +25,17 @@ painel; busca, foco, isolamento e link do Studio; clique no braço abre a regiã
 ocultar sistema e transparência; vistas, reinício e zoom; modo apresentação e atalhos; memória
 liberada ao sair.
 
-**Navegador (celular, Pixel 7 emulado):** entrada, painel e laboratório sem rolagem horizontal.
+**Laboratório de Células (unitários):** esquema das ~45 estruturas, relações e "faz parte de"
+válidos, cada estrutura listada tem malha em cada modelo procedural (e vice-versa), geometria sem
+valores inválidos, busca com sinônimos (carioteca, Golgi), resolução de temas para o Studio, poses da
+mitose (cromátides em polos opostos na anáfase).
+
+**Laboratório de Células (navegador):** organelas registradas e aviso de fora de escala; mitocôndria
+abre o painel com tamanho real, link do Studio e modelo detalhado; busca troca de célula; ocultar e
+transparência; animação de síntese de proteínas (etapas, pausa); osmose (plasmólise e restauração);
+mitose por fases; Modo Apresentação e liberação de memória.
+
+**Navegador (celular, Pixel 7 emulado):** entrada, painel e laboratórios (Corpo Humano e Células) sem rolagem horizontal.
 
 ## Não testado
 

@@ -17,7 +17,7 @@ export const SHORTCUTS: [string, string][] = [
   ['Esc', 'Desmarcar seleção / sair'],
 ];
 
-export function ShortcutsHelp({ onClose }: { onClose: () => void }) {
+export function ShortcutsHelp({ onClose, items = SHORTCUTS }: { onClose: () => void; items?: [string, string][] }) {
   return (
     <div className="fixed inset-0 z-[60] grid place-items-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-labelledby="shortcuts-title" onClick={onClose}>
       <div className="panel w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
@@ -30,7 +30,7 @@ export function ShortcutsHelp({ onClose }: { onClose: () => void }) {
           </button>
         </div>
         <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2.5 text-sm">
-          {SHORTCUTS.map(([k, d]) => (
+          {items.map(([k, d]) => (
             <div key={k} className="contents">
               <dt>
                 <kbd className="rounded-md border border-line-strong bg-ink-950 px-2 py-0.5 font-mono text-xs">{k}</kbd>

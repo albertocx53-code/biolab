@@ -6,7 +6,7 @@ import type { CatalogGroup, CatalogModel } from '@/engine/types';
 import { Icon } from '@/components/ui/Icon';
 
 /** Compact system list: one tap to show/hide, opacity on demand. */
-export function LayersPanel({ groups, models }: { groups: CatalogGroup[]; models: CatalogModel[] }) {
+export function LayersPanel({ groups, models, ariaLabel = 'Sistemas anatômicos' }: { groups: CatalogGroup[]; models: CatalogModel[]; ariaLabel?: string }) {
   const visible = useViewer((s) => s.groupVisible);
   const opacity = useViewer((s) => s.groupOpacity);
   const modelState = useViewer((s) => s.modelState);
@@ -16,7 +16,7 @@ export function LayersPanel({ groups, models }: { groups: CatalogGroup[]; models
   const modelById = new Map(models.map((m) => [m.id, m]));
 
   return (
-    <ul className="space-y-0.5" aria-label="Sistemas anatômicos">
+    <ul className="space-y-0.5" aria-label={ariaLabel}>
       {groups.map((g) => {
         const on = !!visible[g.id];
         const st = modelState[g.modelId] ?? 'idle';

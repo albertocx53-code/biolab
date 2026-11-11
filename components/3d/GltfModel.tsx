@@ -14,7 +14,7 @@ export const DRACO_PATH = '/draco/';
 const disposeTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 // BVH-accelerated raycasting (three-mesh-bvh, MIT): picking stays fast with thousands of meshes.
-THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;
+THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree as unknown as THREE.BufferGeometry["computeBoundsTree"];
 THREE.BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
 THREE.Mesh.prototype.raycast = acceleratedRaycast;
 
