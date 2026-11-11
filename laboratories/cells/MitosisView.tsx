@@ -4,7 +4,7 @@ import { useFrame } from '@react-three/fiber';
 import { useRef } from 'react';
 import { meshRegistry } from '@/engine/selection/registry';
 import type { MaterialLibrary } from '@/engine/visibility/materials';
-import { CellModelView } from './CellModelView';
+import { ProceduralModelView as CellModelView } from '@/laboratories/shared/ProceduralModelView';
 import { deformMembrane, membraneShape, poseMitosis, type MitosisModel } from './mitosis';
 import { CELL_PROCESSES, processClock, useProcess } from './processes';
 

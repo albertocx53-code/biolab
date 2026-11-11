@@ -7,7 +7,7 @@ import { pickHit } from '@/components/3d/GltfModel';
 import { meshRegistry } from '@/engine/selection/registry';
 import { useViewer } from '@/engine/store';
 import type { MaterialLibrary } from '@/engine/visibility/materials';
-import type { MeshDef } from './models';
+import type { MeshDef } from './types';
 
 interface Props {
   modelId: string;
@@ -24,7 +24,7 @@ interface Props {
  * shared engine (SceneSync, CameraRig, selection, isolation) drives exactly
  * like the meshes of a GLB model.
  */
-export function CellModelView({ modelId, meshes, library, hover, onPick, dynamic }: Props) {
+export function ProceduralModelView({ modelId, meshes, library, hover, onPick, dynamic }: Props) {
   const invalidate = useThree((s) => s.invalidate);
   const setHover = useViewer((s) => s.hover);
   const lastHover = useRef(0);

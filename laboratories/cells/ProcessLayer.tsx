@@ -1,108 +1,14 @@
 'use client';
 
-import { useFrame, useThree } from '@react-three/fiber';
+import { useFrame } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { meshRegistry } from '@/engine/selection/registry';
+import { Flow, randomInside, type FlowSpec } from '@/laboratories/shared/Flow';
 import { CELL_PROCESSES, processClock, useProcess } from './processes';
 import type { BuiltModel } from './models';
 
 type Anchors = BuiltModel['anchors'];
-
-/** Advances the process clock and moves through the steps while playing. */
-export function ProcessDriver() {
-  const invalidate = useThree((s) => s.invalidate);
-  const id = useProcess((s) => s.id);
-  const playing = useProcess((s) => s.playing);
-  useEffect(() => {
-    if (id) invalidate();
-  }, [id, playing, invalidate]);
-  useFrame((_, dt) => {
-    const st = useProcess.getState();
-    if (!st.id) return;
-    const proc = CELL_PROCESSES[st.id];
-    if (st.playing) {
-      processClock.t += Math.min(dt, 0.1);
-      const dur = proc.steps[st.step].seconds;
-      if (processClock.t >= dur) {
-        if (st.step < proc.steps.length - 1) st.setStep(st.step + 1);
-        else if (proc.loop) st.setStep(0);
-        else {
-          processClock.t = dur;
-          st.setPlaying(false);
-        }
-      }
-    }
-    invalidate(); // keep particles moving (also while paused, for a gentle idle motion)
-  });
-  return null;
-}
-
-// ------------------------------------------------------------------ particles
-
-interface FlowSpec {
-  from: THREE.Vector3[];
-  to: THREE.Vector3[];
-  color: string;
-  count: number;
-  size: number;
-  /** Seconds for one trip. */
-  trip: number;
-  /** Arc height relative to the distance. */
-  arc?: number;
-}
-
-/** Particles travelling from one set of points to another (molecules, light). */
-function Flow({ spec, active }: { spec: FlowSpec; active: boolean }) {
-  const ref = useRef<THREE.InstancedMesh>(null);
-  const fade = useRef(0);
-  const seeds = useMemo(
-    () =>
-      Array.from({ length: spec.count }, (_, i) => ({
-        a: i % spec.from.length,
-        b: (i * 7 + 3) % spec.to.length,
-        phase: i / spec.count + Math.random() * 0.05,
-        jitter: new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(0.12),
-      })),
-    [spec],
-  );
-  const geo = useMemo(() => new THREE.IcosahedronGeometry(1, 1), []);
-  const mat = useMemo(() => new THREE.MeshStandardMaterial({ color: spec.color, emissive: spec.color, emissiveIntensity: 0.55, roughness: 0.4, transparent: true, depthWrite: false }), [spec.color]);
-  useEffect(
-    () => () => {
-      geo.dispose();
-      mat.dispose();
-    },
-    [geo, mat],
-  );
-  const m = useMemo(() => new THREE.Matrix4(), []);
-  const p = useMemo(() => new THREE.Vector3(), []);
-  const q = useMemo(() => new THREE.Quaternion(), []);
-  const s = useMemo(() => new THREE.Vector3(), []);
-  useFrame((state, dt) => {
-    const mesh = ref.current;
-    if (!mesh) return;
-    fade.current = THREE.MathUtils.clamp(fade.current + (active ? dt : -dt) * 2.5, 0, 1);
-    mat.opacity = fade.current;
-    mesh.visible = fade.current > 0.01;
-    if (!mesh.visible) return;
-    const time = state.clock.elapsedTime;
-    seeds.forEach((sd, i) => {
-      const u = (time / spec.trip + sd.phase) % 1;
-      const a = spec.from[sd.a];
-      const b = spec.to[sd.b];
-      p.copy(a).lerp(b, u).add(sd.jitter);
-      const arc = (spec.arc ?? 0.15) * a.distanceTo(b) * Math.sin(Math.PI * u);
-      p.y += arc;
-      const k = spec.size * Math.min(1, Math.sin(Math.PI * u) * 3);
-      s.setScalar(Math.max(k, 1e-4));
-      m.compose(p, q, s);
-      mesh.setMatrixAt(i, m);
-    });
-    mesh.instanceMatrix.needsUpdate = true;
-  });
-  return <instancedMesh ref={ref} args={[geo, mat, spec.count]} renderOrder={20} raycast={() => null} frustumCulled={false} />;
-}
 
 const C = {
   glicose: '#F59E0B',
@@ -116,9 +22,6 @@ const C = {
   h: '#DC2626',
 };
 
-function randomInside(points: THREE.Vector3[], n: number, spread: number) {
-  return Array.from({ length: n }, (_, i) => points[i % points.length].clone().add(new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(spread)));
-}
 const outward = (pts: THREE.Vector3[], k: number) => pts.map((p) => p.clone().multiplyScalar(k));
 
 /** Flows active per step for the particle-based processes. */
@@ -372,7 +275,7 @@ function FlagellumSpin({ anchors }: { anchors: Anchors }) {
 }
 
 /** Renders the animation for the active process inside the canvas. */
-export function ProcessLayer({ anchors }: { anchors: Anchors }) {
+export function ProcessLayer({ anchors }: { anchors: Anchors; modelId?: string }) {
   const id = useProcess((s) => s.id);
   if (!id || id === 'mitose') return null;
   return (
