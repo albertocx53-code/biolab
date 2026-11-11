@@ -8,8 +8,8 @@ export interface SearchBoxHandle {
   focus(): void;
 }
 
-export const SearchBox = forwardRef<SearchBoxHandle, { search: (q: string) => Structure[]; onPick: (s: Structure) => void; compact?: boolean }>(
-  function SearchBox({ search, onPick, compact }, ref) {
+export const SearchBox = forwardRef<SearchBoxHandle, { search: (q: string) => Structure[]; onPick: (s: Structure) => void; compact?: boolean; placeholder?: string; label?: string }>(
+  function SearchBox({ search, onPick, compact, placeholder = 'Buscar estrutura (ex.: úmero, coração)', label = 'Buscar estrutura anatômica' }, ref) {
     const [q, setQ] = useState('');
     const [open, setOpen] = useState(false);
     const [active, setActive] = useState(0);
@@ -53,9 +53,9 @@ export const SearchBox = forwardRef<SearchBoxHandle, { search: (q: string) => St
               }
               e.stopPropagation();
             }}
-            placeholder="Buscar estrutura (ex.: úmero, coração)"
+            placeholder={placeholder}
             className="h-full w-full bg-transparent text-sm text-fg placeholder:text-fg-subtle focus:outline-none"
-            aria-label="Buscar estrutura anatômica"
+            aria-label={label}
             role="combobox"
             aria-expanded={open && results.length > 0}
             aria-controls="search-results"

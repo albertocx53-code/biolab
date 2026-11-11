@@ -3,14 +3,20 @@
 import { useViewer, type CameraView } from '@/engine/store';
 import { Icon } from '@/components/ui/Icon';
 
-const VIEWS: { id: CameraView; label: string; key: string }[] = [
+export interface ViewButton {
+  id: CameraView;
+  label: string;
+  key: string;
+}
+
+const VIEWS: ViewButton[] = [
   { id: 'frente', label: 'Frente', key: '1' },
   { id: 'costas', label: 'Costas', key: '2' },
   { id: 'esquerda', label: 'Lado esq.', key: '3' },
   { id: 'direita', label: 'Lado dir.', key: '4' },
 ];
 
-export function ViewerToolbar() {
+export function ViewerToolbar({ views = VIEWS }: { views?: ViewButton[] } = {}) {
   const command = useViewer((s) => s.command);
   const zoom = useViewer((s) => s.zoomPercent);
   const showAll = useViewer((s) => s.showAll);
@@ -25,7 +31,7 @@ export function ViewerToolbar() {
     <div className="pointer-events-none absolute inset-x-0 bottom-3 z-20 flex justify-center px-3 sm:bottom-4">
       <div className="float-card pointer-events-auto flex max-w-full items-center gap-0.5 overflow-x-auto rounded-full p-1" role="toolbar" aria-label="Controles da câmera">
         <div className="flex" role="group" aria-label="Vistas da câmera">
-          {VIEWS.map((v) => (
+          {views.map((v) => (
             <button
               key={v.id}
               type="button"
