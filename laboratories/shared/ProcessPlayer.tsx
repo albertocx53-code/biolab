@@ -1,13 +1,23 @@
 'use client';
 
 import { Icon } from '@/components/ui/Icon';
-import { CELL_PROCESSES, useProcess } from './processes';
+import { useProcess, type LabProcess } from './process';
 
 /** Caption + controls for the running process animation (above the camera toolbar). */
-export function ProcessPlayer({ large, docked }: { large?: boolean; /** Dock to the right on wide screens (no panel open). */ docked?: boolean }) {
+export function ProcessPlayer({
+  processes,
+  large,
+  docked,
+}: {
+  processes: Record<string, LabProcess>;
+  large?: boolean;
+  /** Dock to the right on wide screens (no panel open). */
+  docked?: boolean;
+}) {
   const { id, step, playing, setStep, setPlaying, stop, start } = useProcess();
   if (!id) return null;
-  const proc = CELL_PROCESSES[id];
+  const proc = processes[id];
+  if (!proc) return null;
   const cur = proc.steps[step];
   const last = step === proc.steps.length - 1;
   return (
@@ -58,7 +68,7 @@ export function ProcessPlayer({ large, docked }: { large?: boolean; /** Dock to 
                   title={st.title}
                   className={`rounded-full px-2.5 py-1 text-[11.5px] font-semibold ${i === step ? 'bg-fg text-ink-900' : 'bg-ink-800 text-fg-muted hover:text-fg'}`}
                 >
-                  {id === 'mitose' ? st.title : i + 1}
+                  {proc.namedSteps ? st.title : i + 1}
                 </button>
               </li>
             ))}

@@ -13,6 +13,8 @@ Regra do projeto: o BioLab 3D é um produto pago, então **nenhum recurso com cl
 | Imagens `hero-anatomia.webp`, `card-anatomia.webp` | Renderizadas por nós a partir dos GLBs acima | CC BY-SA 4.0 (derivado) | Sim | Idem |
 | Células animal, vegetal e procariótica; mitocôndria, cloroplasto e mitose (`laboratories/cells/`) | Geometria procedural escrita pelo BioLab 3D (nenhum arquivo de terceiros) | Própria | Sim | Nenhuma |
 | Imagem `card-celulas.webp` | Renderizada por nós a partir do modelo procedural | Própria | Sim | Nenhuma |
+| Plantas: planta com flores, flor, semente e germinação, cortes de folha, caule e raiz (`laboratories/plants/`) | Geometria procedural escrita pelo BioLab 3D (nenhum arquivo de terceiros) | Própria | Sim | Nenhuma |
+| Imagem `card-plantas.webp` | Renderizada por nós a partir do modelo procedural | Própria | Sim | Nenhuma |
 | Decodificador Draco (`public/draco/`) | three.js | MIT | Sim | Aviso de copyright |
 | Fontes Inter e Manrope | @fontsource | SIL OFL 1.1 | Sim | — |
 

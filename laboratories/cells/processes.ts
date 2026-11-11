@@ -3,28 +3,10 @@
  * time-compressed). Texts in pt-BR, checked against OpenStax Biology 2e
  * chapters 4, 5, 7, 8 and 10. Each step lasts `seconds` while playing.
  */
-import { create } from 'zustand';
+import type { LabProcess } from '@/laboratories/shared/process';
 
-export interface LegendItem {
-  color: string;
-  label: string;
-}
-export interface ProcessStep {
-  title: string;
-  text: string;
-  seconds: number;
-  legend?: LegendItem[];
-}
-export interface CellProcess {
-  id: string;
-  title: string;
-  /** Structure ids linked to the process (Studio topics, related panel). */
-  structures: string[];
-  note: string;
-  equation?: string;
-  loop?: boolean;
-  steps: ProcessStep[];
-}
+export { processClock, useProcess } from '@/laboratories/shared/process';
+export type CellProcess = LabProcess;
 
 const GLICOSE = { color: '#F59E0B', label: 'Glicose' };
 const PIRUVATO = { color: '#EC4899', label: 'Piruvato' };
@@ -127,6 +109,7 @@ export const CELL_PROCESSES: Record<string, CellProcess> = {
   mitose: {
     id: 'mitose',
     title: 'Mitose e citocinese',
+    namedSteps: true,
     structures: ['cromossomo', 'fuso-mitotico', 'centrossomo', 'envoltorio-nuclear'],
     note: `${TIME} Modelo com 2n = 4 cromossomos (vermelho: origem materna; azul: origem paterna).`,
     steps: [
@@ -139,32 +122,3 @@ export const CELL_PROCESSES: Record<string, CellProcess> = {
     ],
   },
 };
-
-/** Shared clock for the active process (UI reads id/step; the 3D layer reads progress). */
-export interface ProcessState {
-  id: string | null;
-  step: number;
-  playing: boolean;
-  start(id: string, playing?: boolean): void;
-  stop(): void;
-  setStep(step: number): void;
-  setPlaying(p: boolean): void;
-}
-export const useProcess = create<ProcessState>((set) => ({
-  id: null,
-  step: 0,
-  playing: false,
-  start: (id, playing = true) => {
-    processClock.t = 0;
-    set({ id, step: 0, playing });
-  },
-  stop: () => set({ id: null, step: 0, playing: false }),
-  setStep: (step) => {
-    processClock.t = 0;
-    set({ step });
-  },
-  setPlaying: (playing) => set({ playing }),
-}));
-
-/** Seconds elapsed in the current step (mutable, advanced every frame while playing). */
-export const processClock = { t: 0 };

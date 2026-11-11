@@ -5,8 +5,8 @@
 | Suíte | Comando | Resultado |
 |---|---|---|
 | TypeScript | `npm run typecheck` | sem erros |
-| Unitários (Vitest) | `npm test` | **41 passando** |
-| Navegador (Playwright, build de produção) | `npm run test:e2e` | **30 passando** (≈3 min) |
+| Unitários (Vitest) | `npm test` | **52 passando** |
+| Navegador (Playwright, build de produção) | `npm run test:e2e` | **39 passando** (≈4 min) |
 
 ## O que é coberto
 
@@ -35,7 +35,17 @@ abre o painel com tamanho real, link do Studio e modelo detalhado; busca troca d
 transparência; animação de síntese de proteínas (etapas, pausa); osmose (plasmólise e restauração);
 mitose por fases; Modo Apresentação e liberação de memória.
 
-**Navegador (celular, Pixel 7 emulado):** entrada, painel e laboratórios (Corpo Humano e Células) sem rolagem horizontal.
+**Laboratório de Plantas (unitários):** esquema das ~55 estruturas, relações válidas, toda estrutura
+aparece em algum modelo, cada estrutura da legenda tem malha e material, geometria sem valores
+inválidos, busca com sinônimos (líber, seiva bruta, caliptra), processos marcados como esquemáticos,
+resolução de temas para o Studio, poses da germinação (raiz cresce, cotilédones sobem, tegumento cai).
+
+**Laboratório de Plantas (navegador):** estruturas registradas e aviso de fora de escala; busca leva
+ao estômato na folha em corte com tamanho real e link do Studio; da folha da planta para o corte e de
+volta; animação de transporte de seiva; estômatos abrem e fecham e voltam ao normal; germinação até a
+plântula; fecundação (ovário cresce e é restaurado); Studio recebe o tema "Xilema".
+
+**Navegador (celular, Pixel 7 emulado):** entrada, painel e laboratórios (Corpo Humano, Células e Plantas) sem rolagem horizontal.
 
 ## Não testado
 

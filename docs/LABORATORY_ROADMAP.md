@@ -7,7 +7,7 @@ Fonte de verdade: `data/biology/laboratories.ts` (o painel lê dali).
 | Corpo Humano | **Disponível** | 1 | 13 camadas/sistemas, 2.206 malhas, 19 regiões clicáveis, painel científico |
 | Células | **Disponível** | 3 | Células animal, vegetal e procariótica; mitocôndria e cloroplasto em detalhe; mitose; 8 animações |
 | Genética | Planejado | 2 | DNA, replicação, transcrição, tradução, cromossomos, heredogramas |
-| Plantas | Planejado | 3 | Flor, raiz, caule, folha, fotossíntese, transpiração |
+| Plantas | **Disponível** | 4 | Planta com flores, flor, semente e germinação, cortes de folha, caule e raiz; 10 animações |
 | Animais | Planejado | 3 | Comparação de sistemas entre grupos, embriologia |
 | Microrganismos | Planejado | 4 | Bactéria, vírus, fungos, protozoários, ciclos de doenças |
 
@@ -27,8 +27,23 @@ componente em `laboratories/<lab>/`.
 - Processos animados (batimento cardíaco, respiração, contração muscular).
 - Modelo feminino (o Z-Anatomy é masculino).
 
+## Motor procedural compartilhado
+
+Células e Plantas usam o mesmo motor em `laboratories/shared/`: `ProceduralLab` (interface completa:
+modelos, legenda, busca, painel científico, processos, Modo Apresentação, atalhos), `createCatalog`
+(estruturas no formato do esquema e busca sem acento), geometria procedural, partículas (`Flow`, com
+caminhos) e o relógio das animações. Um novo laboratório procedural precisa de conteúdo em
+`data/biology/<lab>/`, um catálogo, materiais, construtores de modelos e uma configuração.
+
 ## Células: pendências
 
 - Meiose, transporte ativo/difusão facilitada e endocitose como animações próprias.
 - Citoesqueleto (microtúbulos e filamentos) e peroxissomos com mais detalhe.
+- Revisão pedagógica dos textos.
+
+## Plantas: pendências
+
+- Monocotiledônea (milho) para comparar raiz fasciculada, nervação paralela e feixes espalhados.
+- Ciclo de vida das briófitas, pteridófitas e gimnospermas.
+- Tropismos (fototropismo e gravitropismo) e hormônios vegetais animados.
 - Revisão pedagógica dos textos.

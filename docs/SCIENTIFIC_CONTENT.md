@@ -8,6 +8,7 @@
 | Terminologia Anatômica (TA2) / FIPAT | Referência | Nomes latinos e hierarquia |
 | Z-Anatomy translations | CC BY-SA 4.0 | Nomes em português, latim e inglês |
 | OpenStax *Biology 2e* (caps. 4, 5, 7, 8 e 10) | CC BY 4.0 | Base dos textos do laboratório de Células e das animações (reescritos em pt-BR) |
+| OpenStax *Biology 2e* (caps. 8, 30 e 32) | CC BY 4.0 | Base dos textos do laboratório de Plantas e das animações (reescritos em pt-BR) |
 
 Nenhum texto foi copiado da Wikipédia.
 
@@ -23,6 +24,11 @@ Nenhum texto foi copiado da Wikipédia.
   aproximado, sinônimos usados nos livros brasileiros (carioteca, complexo de Golgi…) e referências.
 - `laboratories/cells/processes.ts`: textos das 8 animações (síntese de proteínas, respiração celular,
   fotossíntese, osmose, flagelo, mitose), sempre marcadas como esquemáticas e com tempo comprimido.
+- `data/biology/plants/content.ts`: ~55 estruturas de botânica (órgãos, partes da flor, tecidos da
+  folha, do caule e da raiz, semente e embrião), com sinônimos dos livros brasileiros (líber, lenho,
+  caliptra, seiva bruta/elaborada…) e referências por seção do OpenStax.
+- `laboratories/plants/processes.ts`: textos das 10 animações de Plantas, marcadas como esquemáticas e
+  com tempo comprimido.
 - Estruturas sem texto curado mostram apenas os dados do catálogo e "Conteúdo em elaboração".
 
 ## Revisão
@@ -40,4 +46,7 @@ conceitos (`curated` e `reviewedBy`/`reviewedAt`).
 - Células: cores são convenções didáticas (organelas reais são quase transparentes); números como
   "30 a 32 ATP por glicose" seguem a estimativa atual do OpenStax; o modelo de mitose usa 2n = 4
   e diz isso na tela.
+- Plantas: a planta é uma eudicotiledônea genérica (como um feijoeiro), não uma espécie real; o fruto
+  aberto lembra um tomate. Cores dos cortes seguem a convenção das lâminas coradas (xilema
+  avermelhado, floema azulado). A germinação mostrada é a epígea do feijão.
 - Quando o modelo não mostra algo (rins, orelha interna), o painel diz isso em vez de omitir.

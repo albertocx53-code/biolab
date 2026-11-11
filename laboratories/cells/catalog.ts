@@ -5,24 +5,16 @@
  */
 import type { Attribution, Structure } from '@/data/biology/schema';
 import { CELL_CONTENT, CELL_REFS } from '@/data/biology/cells/content';
+import { createCatalog, type LabModelInfo } from '@/laboratories/shared/catalog';
+
+export { normalize } from '@/laboratories/shared/catalog';
 
 export const CELL_LAB_ID = 'celulas' as const;
 
 export type CellModelId = 'animal' | 'vegetal' | 'procariotica' | 'mitocondria' | 'cloroplasto' | 'mitose';
 
-export interface CellModelInfo {
-  id: CellModelId;
-  label: string;
-  short: string;
+export interface CellModelInfo extends LabModelInfo<CellModelId> {
   kind: 'celula' | 'detalhe' | 'processo';
-  /** Real size, shown next to the "fora de escala" warning. */
-  realSize: string;
-  summary: string;
-  /** Structures that have meshes in this model, in legend order. */
-  structures: string[];
-  /** Structure this detailed model zooms into (mitochondrion, chloroplast). */
-  detailOf?: string;
-  processes: string[];
 }
 
 export const CELL_MODELS: CellModelInfo[] = [
@@ -122,91 +114,33 @@ export const CELL_MODELS: CellModelInfo[] = [
   },
 ];
 
-export const cellModel = (id: string) => CELL_MODELS.find((m) => m.id === id);
-
 export const CELL_REPRESENTATION = 'Modelo esquemático, fora de escala';
 
 /** All models are original procedural geometry created for BioLab 3D. */
 export const CELL_ATTRIBUTIONS: Attribution[] = [];
 
-function toStructure(id: string, model?: CellModelInfo): Structure | undefined {
-  const c = CELL_CONTENT[id];
-  if (!c) return undefined;
-  const home = model ?? CELL_MODELS.find((m) => m.structures.includes(id) || m.detailOf === id) ?? CELL_MODELS[0];
-  return {
-    id,
-    laboratoryId: CELL_LAB_ID,
-    modelId: home.id,
-    parentStructureId: c.parent ?? null,
-    namePtBR: c.name,
-    scientificName: c.scientificName ?? null,
-    sourceName: c.en,
-    category: c.category,
-    biologicalSystem: home.label,
-    description: c.description,
-    function: c.function,
-    relatedStructures: (c.related ?? []).filter((r) => r in CELL_CONTENT),
-    educationalTopics: c.topics,
-    modelMeshIds: [],
-    scientificReferences: c.refs.map((r) => CELL_REFS[r]),
-    assetAttributions: CELL_ATTRIBUTIONS,
-    contentReviewed: false,
-  };
-}
+export const CELL_CATALOG = createCatalog({ labId: CELL_LAB_ID, models: CELL_MODELS, content: CELL_CONTENT, refs: CELL_REFS, attributions: CELL_ATTRIBUTIONS });
+
+export const cellModel = (id: string) => CELL_MODELS.find((m) => m.id === id);
 
 /** Structure as seen from one model (system label and mesh ids filled in by the caller). */
 export function cellStructure(id: string, modelId?: string): Structure | undefined {
-  return toStructure(id, modelId ? cellModel(modelId) : undefined);
+  return CELL_CATALOG.structure(id, modelId);
 }
 
 export function allCellStructures(): Structure[] {
-  return Object.keys(CELL_CONTENT).map((id) => toStructure(id)!);
+  return CELL_CATALOG.all();
 }
 
 /** Models where a structure can be shown (its own meshes, or as a detailed model). */
 export function modelsShowing(id: string): CellModelInfo[] {
-  return CELL_MODELS.filter((m) => m.structures.includes(id) || m.detailOf === id || m.structures.some((s) => CELL_CONTENT[s]?.parent === id));
+  return CELL_CATALOG.modelsShowing(id) as CellModelInfo[];
 }
-
-export function normalize(s: string) {
-  return s
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z0-9 ]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-const SEARCH_INDEX = Object.entries(CELL_CONTENT).map(([id, c]) => ({
-  id,
-  name: normalize(c.name),
-  extra: normalize([c.en, c.scientificName ?? '', ...(c.aliases ?? [])].join(' ')),
-}));
 
 /**
  * Searches all cell structures. Structures visible in the current model come
  * first; others still appear (selecting them switches model).
  */
 export function searchCells(q: string, currentModel: string, limit = 12): Structure[] {
-  const n = normalize(q);
-  if (n.length < 2) return [];
-  const words = n.split(' ');
-  const here = cellModel(currentModel);
-  const scored: { id: string; score: number }[] = [];
-  for (const e of SEARCH_INDEX) {
-    const hay = `${e.name} ${e.extra}`;
-    if (!words.every((w) => hay.includes(w))) continue;
-    let score = e.name.startsWith(n) ? 0 : e.name.includes(n) ? 1 : 2;
-    if (!here || !modelsShowing(e.id).some((m) => m.id === here.id)) score += 3;
-    scored.push({ id: e.id, score });
-  }
-  return scored
-    .sort((a, b) => a.score - b.score || a.id.localeCompare(b.id))
-    .slice(0, limit)
-    .map((s) => {
-      const showing = modelsShowing(s.id);
-      const inHere = showing.find((m) => m.id === currentModel);
-      return toStructure(s.id, inHere ?? showing[0])!;
-    });
+  return CELL_CATALOG.search(q, currentModel, limit);
 }

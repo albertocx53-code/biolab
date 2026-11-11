@@ -5,8 +5,8 @@
  */
 import * as THREE from 'three';
 import type { CameraPreset } from '@/components/3d/CameraRig';
-import { ellipsoid, inside, merge, paint, rng, scaled, tangle, tube, wall, type Cut, type DistFn } from './geometry';
-import type { MeshDef } from './models';
+import { ellipsoid, inside, merge, paint, rng, scaled, tangle, tube, wall, type Cut, type DistFn } from '@/laboratories/shared/geometry';
+import type { MeshDef } from '@/laboratories/shared/types';
 
 export const MITOSIS_CUT: Cut = { center: 0.35, width: Math.PI / 2 };
 const CELL_R = 1.25;

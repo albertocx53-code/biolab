@@ -7,6 +7,9 @@
 import * as THREE from 'three';
 import type { CameraPreset } from '@/components/3d/CameraRig';
 import type { CellModelId } from './catalog';
+import { presetFor as sharedPreset, type BuiltModel, type MeshDef } from '@/laboratories/shared/types';
+
+export type { BuiltModel, MeshDef };
 import {
   basisQuat,
   capsuleY,
@@ -33,32 +36,15 @@ import {
   type Cut,
   type DistFn,
   type Rng,
-} from './geometry';
+} from '@/laboratories/shared/geometry';
 
-export interface MeshDef {
-  id: string;
-  structure: string;
-  /** Material class (defaults to the structure id). */
-  cls?: string;
-  geometry: THREE.BufferGeometry;
-}
 
-export interface BuiltModel {
-  meshes: MeshDef[];
-  anchors: Record<string, THREE.Vector3[]>;
-  preset: CameraPreset;
-}
 
 const VIEW_PHI = 0.55; // the cut-away faces the default camera
 const CUT: Cut = { center: VIEW_PHI, width: Math.PI / 2 };
 
 function presetFor(dist: number, target: [number, number, number] = [0, 0, 0], elev = 0.42, phi = VIEW_PHI): CameraPreset {
-  const p: [number, number, number] = [
-    target[0] + Math.sin(phi) * Math.cos(elev) * dist,
-    target[1] + Math.sin(elev) * dist,
-    target[2] + Math.cos(phi) * Math.cos(elev) * dist,
-  ];
-  return { position: p, target, distance: dist, minDistance: 0.25, maxDistance: dist * 2.4 };
+  return sharedPreset(dist, target, elev, phi);
 }
 
 /** Simple occupancy test so organelles do not overlap. */
