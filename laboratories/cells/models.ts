@@ -252,24 +252,24 @@ function animalCell(): BuiltModel {
   space.take(new THREE.Vector3(), NR * 1.9);
   const ribos: THREE.Vector3[] = [];
   const inCyto = (p: THREE.Vector3, margin = 0.9) => inside(cell, p, margin) && !inside(nd, p, 1.1);
-  const rer = roughER(r, nd, new THREE.Vector3(), VIEW_PHI - 2.3, VIEW_PHI + 0.15, 4, ribos, (p) => inCyto(p, 0.94));
+  const rer = roughER(r, nd, new THREE.Vector3(), VIEW_PHI + 0.5, VIEW_PHI + 2.9, 4, ribos, (p) => inCyto(p, 0.94));
   meshes.push({ id: 'reticulo-endoplasmatico-rugoso', structure: 'reticulo-endoplasmatico-rugoso', geometry: rer.geometry });
   anchors.rer = [rer.anchor];
 
   // smooth ER: tangled tubules on the other side of the nucleus
   const ser: THREE.BufferGeometry[] = [];
   for (let i = 0; i < 7; i++) {
-    const a = VIEW_PHI + r.range(0.9, 2.1);
-    const start = new THREE.Vector3(Math.sin(a) * 0.9, r.range(-0.35, 0.35), Math.cos(a) * 0.9);
+    const a = VIEW_PHI - r.range(1.0, 2.2);
+    const start = new THREE.Vector3(Math.sin(a) * 0.95, r.range(-0.35, 0.35), Math.cos(a) * 0.9);
     const pts = tangle(r, start, 16, 0.07, (p) => inCyto(p, 0.86) && p.length() > NR * 1.55 && !inWedge(p, CUT));
     ser.push(tube(pts, 0.017, false, 90, 6));
   }
   meshes.push({ id: 'reticulo-endoplasmatico-liso', structure: 'reticulo-endoplasmatico-liso', geometry: merge(ser) });
-  space.take(new THREE.Vector3(Math.sin(VIEW_PHI + 1.5) * 0.9, 0, Math.cos(VIEW_PHI + 1.5) * 0.9), 0.32);
+  space.take(new THREE.Vector3(Math.sin(VIEW_PHI - 1.6) * 0.95, 0, Math.cos(VIEW_PHI - 1.6) * 0.95), 0.32);
 
   // Golgi between nucleus and membrane, slightly inside the cut-away
-  const gAt = new THREE.Vector3(Math.sin(VIEW_PHI + 0.15) * 0.82, 0.38, Math.cos(VIEW_PHI + 0.15) * 0.82);
-  const go = golgi(r, gAt, new THREE.Vector3(0, 0.1, 0), 0.27);
+  const gAt = new THREE.Vector3(Math.sin(VIEW_PHI - 0.5) * 0.92, 0.3, Math.cos(VIEW_PHI - 0.5) * 0.92);
+  const go = golgi(r, gAt, new THREE.Vector3(0, 0.1, 0), 0.22);
   space.take(gAt, 0.36);
   meshes.push({ id: 'complexo-golgiense', structure: 'complexo-golgiense', geometry: go.geometry });
   const exitDir = go.axis.clone();
@@ -279,7 +279,7 @@ function animalCell(): BuiltModel {
   Object.assign(anchors, { golgiCis: [go.cis], golgiTrans: [go.trans], exit: [exit] });
 
   // centrioles near the nucleus (centrosome)
-  const cAt = new THREE.Vector3(Math.sin(VIEW_PHI - 0.5) * 0.66, 0.42, Math.cos(VIEW_PHI - 0.5) * 0.66);
+  const cAt = new THREE.Vector3(Math.sin(VIEW_PHI + 0.35) * 0.72, 0.5, Math.cos(VIEW_PHI + 0.35) * 0.72);
   space.take(cAt, 0.14);
   meshes.push({ id: 'centriolos', structure: 'centriolos', geometry: centriolePair(cAt, 0.13) });
 
@@ -339,7 +339,7 @@ function plantCell(): BuiltModel {
   space.take(nC, NR * 1.7);
   const inCyto = (p: THREE.Vector3, margin = 0.92) => inside(mem, p, margin) && !inside(vac, p, 1.07) && !inside(nd, p.clone().sub(nC), 1.1);
   const ribos: THREE.Vector3[] = [];
-  const rer = roughER(r, nd, nC, VIEW_PHI - 2.0, VIEW_PHI + 0.4, 3, ribos, (p) => inCyto(p, 0.95));
+  const rer = roughER(r, nd, nC, VIEW_PHI + 1.1, VIEW_PHI + 3.7, 3, ribos, (p) => inCyto(p, 0.95));
   meshes.push({ id: 'reticulo-endoplasmatico-rugoso', structure: 'reticulo-endoplasmatico-rugoso', geometry: rer.geometry });
   anchors.rer = [rer.anchor];
 
@@ -481,6 +481,7 @@ function mitochondrionDetail(): BuiltModel {
     }
   }
   meshes.push({ id: 'cristas-mitocondriais', structure: 'cristas-mitocondriais', geometry: merge(cristae) });
+  anchors.cristae = atp.filter((_, i) => i % 23 === 0).map((p) => p.clone());
   meshes.push({ id: 'atp-sintase', structure: 'atp-sintase', geometry: dots(atp, 0.02, 1) });
 
   const dna: THREE.BufferGeometry[] = [];
@@ -499,7 +500,7 @@ function mitochondrionDetail(): BuiltModel {
   });
   for (const m of meshes) m.geometry.applyQuaternion(LAY);
   for (const k of Object.keys(anchors)) anchors[k] = anchors[k].map((p) => p.clone().applyQuaternion(LAY));
-  return { meshes, anchors, preset: presetFor(6.4, [0, 0, 0], 0.62, 0.15) };
+  return { meshes, anchors, preset: presetFor(5.6, [0, 0, 0], 0.72, 0.85) };
 }
 
 // ===================================================================== chloroplast (detail)

@@ -39,9 +39,9 @@ export const CELL_MATERIALS: Record<string, MaterialSpec> = {
   'membrana-mitocondrial-externa': { color: '#DE6538', ...SOFT },
   'espaco-intermembranas': { color: '#FBD6C2', roughness: 0.9, doubleSide: true },
   'membrana-mitocondrial-interna': { color: '#F08D5E', ...SOFT },
-  'cristas-mitocondriais': { color: '#F6B183', ...SOFT },
+  'cristas-mitocondriais': { color: '#E8834F', ...SOFT },
   'atp-sintase': { color: '#9B3D1E', roughness: 0.5 },
-  'matriz-mitocondrial': { color: '#F7C6A6', roughness: 0.9, doubleSide: true },
+  'matriz-mitocondrial': { color: '#FBE3D2', roughness: 0.9, doubleSide: true },
   'dna-mitocondrial': { color: '#7B4FB8', ...SOFT },
 
   'envoltorio-cloroplasto': { ...TONED },
