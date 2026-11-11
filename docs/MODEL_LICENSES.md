@@ -11,6 +11,8 @@ Regra do projeto: o BioLab 3D é um produto pago, então **nenhum recurso com cl
 | Geometria de base do Z-Anatomy | BodyParts3D (DBCLS) | CC BY-SA 2.1 JP | Sim | Atribuição; mesma licença |
 | Tabela de traduções (nomes em pt/la/en) | Z-Anatomy (`translations`) | CC BY-SA 4.0 | Sim | Idem |
 | Imagens `hero-anatomia.webp`, `card-anatomia.webp` | Renderizadas por nós a partir dos GLBs acima | CC BY-SA 4.0 (derivado) | Sim | Idem |
+| Células animal, vegetal e procariótica; mitocôndria, cloroplasto e mitose (`laboratories/cells/`) | Geometria procedural escrita pelo BioLab 3D (nenhum arquivo de terceiros) | Própria | Sim | Nenhuma |
+| Imagem `card-celulas.webp` | Renderizada por nós a partir do modelo procedural | Própria | Sim | Nenhuma |
 | Decodificador Draco (`public/draco/`) | three.js | MIT | Sim | Aviso de copyright |
 | Fontes Inter e Manrope | @fontsource | SIL OFL 1.1 | Sim | — |
 
@@ -18,6 +20,15 @@ Regra do projeto: o BioLab 3D é um produto pago, então **nenhum recurso com cl
 distribuídos sob CC BY-SA 4.0 (`public/models/LICENSE.md`). O código do aplicativo é uma obra
 separada que apenas carrega esses arquivos. A atribuição aparece no rodapé do laboratório e na
 página `/creditos`.
+
+### Por que as células são geradas em código
+
+Pesquisamos modelos prontos de célula (Sketchfab, BlendSwap, Poly Haven). Os que têm qualidade quase
+sempre são uma malha única (organelas não separadas para clicar) ou têm licença NC/"Standard" sem
+redistribuição. Como o laboratório precisa de organelas selecionáveis, cortes e animações, os
+modelos foram criados em código (`laboratories/cells/geometry.ts` e `models.ts`): formas
+esquemáticas, fora de escala, sem nenhuma dependência de licença. O aviso "Modelo esquemático, fora
+de escala" e o tamanho real de cada estrutura aparecem na interface.
 
 ## Excluídos do arquivo exportado
 

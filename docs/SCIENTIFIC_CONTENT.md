@@ -7,6 +7,7 @@
 | OpenStax *Anatomy and Physiology 2e* | CC BY 4.0 | Base dos textos de descrição e função (reescritos em pt-BR) |
 | Terminologia Anatômica (TA2) / FIPAT | Referência | Nomes latinos e hierarquia |
 | Z-Anatomy translations | CC BY-SA 4.0 | Nomes em português, latim e inglês |
+| OpenStax *Biology 2e* (caps. 4, 5, 7, 8 e 10) | CC BY 4.0 | Base dos textos do laboratório de Células e das animações (reescritos em pt-BR) |
 
 Nenhum texto foi copiado da Wikipédia.
 
@@ -17,6 +18,11 @@ Nenhum texto foi copiado da Wikipédia.
 - `data/biology/human/content.ts`: textos curados de ~50 estruturas (coração e câmaras, aorta,
   pulmões, traqueia, diafragma, fígado, estômago, pâncreas, sistema reprodutor masculino,
   glândulas endócrinas, baço, ossos do membro superior, músculos e nervos principais, pele).
+- `data/biology/cells/content.ts`: ~45 estruturas celulares (envoltórios, núcleo, endomembranas,
+  mitocôndria e cloroplasto em detalhe, estruturas bacterianas, mitose), cada uma com tamanho real
+  aproximado, sinônimos usados nos livros brasileiros (carioteca, complexo de Golgi…) e referências.
+- `laboratories/cells/processes.ts`: textos das 8 animações (síntese de proteínas, respiração celular,
+  fotossíntese, osmose, flagelo, mitose), sempre marcadas como esquemáticas e com tempo comprimido.
 - Estruturas sem texto curado mostram apenas os dados do catálogo e "Conteúdo em elaboração".
 
 ## Revisão
@@ -31,4 +37,7 @@ conceitos (`curated` e `reviewedBy`/`reviewedAt`).
 
 - Linguagem para ensino médio, sem simplificações erradas.
 - O sistema reprodutor é tratado em linguagem técnica e escolar.
+- Células: cores são convenções didáticas (organelas reais são quase transparentes); números como
+  "30 a 32 ATP por glicose" seguem a estimativa atual do OpenStax; o modelo de mitose usa 2n = 4
+  e diz isso na tela.
 - Quando o modelo não mostra algo (rins, orelha interna), o painel diz isso em vez de omitir.

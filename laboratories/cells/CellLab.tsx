@@ -75,6 +75,7 @@ export function CellLab({ canUseStudio, tierLabel }: { canUseStudio: boolean; ti
   const [dark, setDark] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
+  const [sideOpen, setSideOpen] = useState(false);
   const [focusMesh, setFocusMesh] = useState<string | null>(null);
   const pending = useRef<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -382,6 +383,11 @@ export function CellLab({ canUseStudio, tierLabel }: { canUseStudio: boolean; ti
           )}
 
           <div className="pointer-events-auto ml-auto flex items-center gap-2">
+            {!pres && (
+              <button type="button" className="btn btn-ghost h-10 rounded-full lg:hidden" onClick={() => setSideOpen((v) => !v)} aria-expanded={sideOpen}>
+                <Icon name="layers" size={16} /> Modelos
+              </button>
+            )}
             <button type="button" className="icon-btn rounded-full" onClick={toggleTheme} aria-label={dark ? 'Fundo claro' : 'Fundo escuro'} title={dark ? 'Fundo claro' : 'Fundo escuro'}>
               <Icon name={dark ? 'sun' : 'moon'} size={17} />
             </button>
@@ -404,7 +410,7 @@ export function CellLab({ canUseStudio, tierLabel }: { canUseStudio: boolean; ti
 
       {/* ---------- left: models, structures, processes */}
       {!hideUi && (
-        <aside className="float-card absolute top-20 left-3 z-20 flex max-h-[calc(100%-11rem)] w-[264px] flex-col max-md:max-h-[40%] sm:left-4" aria-label="Modelos e estruturas" data-testid="cell-sidebar">
+        <aside className={`float-card absolute top-20 left-3 z-20 flex max-h-[calc(100%-11rem)] w-[264px] flex-col sm:left-4 ${sideOpen || pres ? '' : 'max-lg:hidden'}`} aria-label="Modelos e estruturas" data-testid="cell-sidebar">
           <div className="border-b border-line p-3">
             <p className="eyebrow mb-2 px-1">Modelo</p>
             <div className="grid grid-cols-3 gap-1" role="radiogroup" aria-label="Tipo de célula">

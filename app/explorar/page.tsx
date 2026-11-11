@@ -13,6 +13,11 @@ export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = { title: 'Laboratórios' };
 
+const CARD_IMAGE: Partial<Record<string, { src: string; alt: string; position: string }>> = {
+  'anatomia-humana': { src: '/images/card-anatomia.webp', alt: 'Modelo 3D do corpo humano com esqueleto e órgãos', position: 'object-[center_35%]' },
+  celulas: { src: '/images/card-celulas.webp', alt: 'Modelo 3D de célula animal em corte, com núcleo e organelas', position: 'object-center' },
+};
+
 const STATUS_LABEL = {
   disponivel: 'Disponível',
   'em-desenvolvimento': 'Em desenvolvimento',
@@ -64,8 +69,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                   data-testid={`lab-card-${lab.slug}`}
                 >
                   <div className="relative h-48 overflow-hidden border-b border-line bg-ink-800" style={{ backgroundImage: `radial-gradient(circle at 50% 60%, ${lab.accent}1f, transparent 65%)` }}>
-                    {lab.id === 'anatomia-humana' ? (
-                      <Image src="/images/card-anatomia.webp" alt="Modelo 3D do corpo humano com esqueleto e órgãos" fill sizes="(min-width:1024px) 33vw, (min-width:640px) 50vw, 100vw" className="object-cover object-[center_35%] transition-transform duration-500 group-hover:scale-[1.03]" />
+                    {CARD_IMAGE[lab.id] ? (
+                      <Image src={CARD_IMAGE[lab.id]!.src} alt={CARD_IMAGE[lab.id]!.alt} fill sizes="(min-width:1024px) 33vw, (min-width:640px) 50vw, 100vw" className={`object-cover transition-transform duration-500 group-hover:scale-[1.03] ${CARD_IMAGE[lab.id]!.position}`} />
                     ) : (
                       <div className="absolute inset-0 p-6 opacity-90 transition-opacity group-hover:opacity-100">
                         <LabArt id={lab.id} accent={lab.accent} />
