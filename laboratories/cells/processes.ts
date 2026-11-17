@@ -106,6 +106,19 @@ export const CELL_PROCESSES: Record<string, CellProcess> = {
     loop: true,
     steps: [{ title: 'Flagelo em rotação', text: 'Um motor de proteínas na base do flagelo, movido pelo fluxo de íons H⁺ através da membrana, faz o filamento girar como uma hélice e empurra a bactéria.', seconds: 8 }],
   },
+  fissao: {
+    id: 'fissao',
+    title: 'Fissão binária',
+    namedSteps: true,
+    structures: ['nucleoide', 'parede-celular-bacteriana', 'membrana-plasmatica', 'plasmideos'],
+    note: `${TIME} Em condições ideais, Escherichia coli se divide a cada 20 minutos.`,
+    steps: [
+      { title: 'Replicação do DNA', text: 'O cromossomo circular é copiado a partir da origem de replicação. As duas cópias ficam presas à membrana; os plasmídeos também se replicam.', seconds: 6 },
+      { title: 'Alongamento', text: 'A célula cresce e se alonga; as duas cópias do cromossomo são afastadas para lados opostos.', seconds: 6 },
+      { title: 'Formação do septo', text: 'A proteína FtsZ forma um anel no meio da célula; membrana e parede crescem para dentro e formam o septo.', seconds: 6 },
+      { title: 'Separação', text: 'O septo se completa e as duas células-filhas, geneticamente idênticas, se separam.', seconds: 5 },
+    ],
+  },
   mitose: {
     id: 'mitose',
     title: 'Mitose e citocinese',

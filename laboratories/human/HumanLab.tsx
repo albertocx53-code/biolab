@@ -11,7 +11,9 @@ import { SelectionLabel } from '@/components/3d/SelectionLabel';
 import type { CameraPreset } from '@/components/3d/CameraRig';
 import { LayersPanel } from '@/components/laboratory/LayersPanel';
 import { DepthSlider, applyDepth } from '@/components/laboratory/DepthSlider';
+import { LessonsPanel } from '@/components/laboratory/LessonsPanel';
 import { ScientificPanel } from '@/components/laboratory/ScientificPanel';
+import { lessonsFor, type LessonAction } from '@/data/biology/lessons';
 import { RegionPanel, type RegionLayer } from '@/components/laboratory/RegionPanel';
 import { SearchBox, type SearchBoxHandle } from '@/components/laboratory/SearchBox';
 import { QualityMenu } from '@/components/laboratory/QualityMenu';
@@ -68,6 +70,9 @@ export function HumanLab({ canUseStudio, tierLabel }: { canUseStudio: boolean; t
   const [depth, setDepth] = useState(DEFAULT_DEPTH);
   const [dark, setDark] = useState(false);
   const [heartCut, setHeartCut] = useState(false);
+  const [lessonsOpen, setLessonsOpen] = useState(false);
+  const [lessonId, setLessonId] = useState<string | null>(null);
+  const lessons = useMemo(() => lessonsFor('anatomia-humana'), []);
   const processId = useProcess((p) => p.id);
   const rootRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<SearchBoxHandle>(null);
@@ -219,6 +224,46 @@ export function HumanLab({ canUseStudio, tierLabel }: { canUseStudio: boolean; t
       p.start(pid);
     },
     [showCirculation],
+  );
+
+  /** Classroom view of one anatomical system: peel the outer layers as needed, show the group and frame it. */
+  const showSystem = useCallback(
+    (group: string) => {
+      if (!index) return;
+      const st = useViewer.getState();
+      setRegion(null);
+      st.isolate(null);
+      const need = group === 'tegumentar' ? 0 : group === 'muscular' || group === 'fascias' ? 1 : group === 'esqueletico' ? 2 : 3;
+      setDepth(need);
+      applyDepth(need);
+      st.setGroupVisible(group, true);
+      st.setGroupOpacity(group, 1);
+      if (need === 3) {
+        st.setGroupVisible('esqueletico', true);
+        st.setGroupOpacity('esqueletico', 0.14);
+        if (group !== 'respiratorio') st.setGroupOpacity('respiratorio', 0.12);
+      }
+      const meshes = index.raw.meshes.filter((m) => m.g === group).map((m) => m.id);
+      setTimeout(() => useViewer.getState().command({ type: 'focus', meshIds: meshes }), 80);
+    },
+    [index],
+  );
+
+  /** A button of a lesson script: show a structure, a whole system or start an animation. */
+  const runLessonAction = useCallback(
+    (a: LessonAction) => {
+      if (!index) return;
+      if (a.group) showSystem(a.group);
+      if (a.structure) {
+        const id = index.structures.has(a.structure) ? a.structure : index.structures.has(`${a.structure}-dir`) ? `${a.structure}-dir` : null;
+        if (id) {
+          setRegion(null);
+          selectStructure(id);
+        }
+      }
+      if (a.process) startProcess(a.process);
+    },
+    [index, selectStructure, showSystem, startProcess],
   );
 
   const openRegion = useCallback(
@@ -393,7 +438,7 @@ export function HumanLab({ canUseStudio, tierLabel }: { canUseStudio: boolean; t
   const hovered = index && s.hoveredMeshId ? index.structures.get(s.hoveredMeshId) : undefined;
   const pres = s.presentation;
   const hideUi = s.uiHidden;
-  const showRight = !hideUi && s.panelOpen && (!!selected || !!region);
+  const showRight = !hideUi && ((s.panelOpen && (!!selected || !!region)) || lessonsOpen);
 
   if (!webgl) {
     return (
@@ -494,6 +539,11 @@ export function HumanLab({ canUseStudio, tierLabel }: { canUseStudio: boolean; t
               <Icon name={dark ? 'sun' : 'moon'} size={17} />
             </button>
             <QualityMenu />
+            {index && (
+              <button type="button" className={`btn h-10 rounded-full ${lessonsOpen ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setLessonsOpen((v) => !v)} aria-pressed={lessonsOpen} title="Roteiros de aula" data-testid="lessons-toggle">
+                <Icon name="book" size={16} /> <span className="hidden sm:inline">Aulas</span>
+              </button>
+            )}
             <button type="button" className="icon-btn hidden rounded-full sm:inline-grid" onClick={() => setShowHelp(true)} aria-label="Atalhos de teclado" title="Atalhos (?)">
               <Icon name="keyboard" />
             </button>
@@ -581,9 +631,24 @@ export function HumanLab({ canUseStudio, tierLabel }: { canUseStudio: boolean; t
       {/* ---------- scientific / region panel (floating, right) */}
       {showRight && index && (
         <aside
-          className={`float-card absolute z-20 overflow-hidden max-lg:inset-x-2 max-lg:bottom-2 max-lg:h-[55%] lg:top-20 lg:right-4 lg:bottom-20 ${pres ? 'lg:w-[440px]' : 'lg:w-[380px]'}`}
+          className={`float-card absolute z-20 overflow-hidden max-lg:inset-x-2 max-lg:bottom-2 max-lg:h-[55%] lg:top-20 lg:right-4 lg:bottom-20 ${pres ? 'lg:w-[460px]' : lessonsOpen ? 'lg:w-[400px]' : 'lg:w-[380px]'}`}
         >
-          {selected ? (
+          {lessonsOpen ? (
+            <LessonsPanel
+              lessons={lessons}
+              lessonId={lessonId}
+              onLesson={setLessonId}
+              onAction={runLessonAction}
+              onClose={() => setLessonsOpen(false)}
+              selectedName={selected?.namePtBR ?? null}
+              onOpenSelected={() => {
+                setLessonsOpen(false);
+                useViewer.getState().setPanelOpen(true);
+              }}
+              large={pres}
+              activeProcess={processId}
+            />
+          ) : selected ? (
             <ScientificPanel
               structure={selected}
               getStructure={getStructure}

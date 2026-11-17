@@ -11,7 +11,7 @@ export { normalize } from '@/laboratories/shared/catalog';
 
 export const CELL_LAB_ID = 'celulas' as const;
 
-export type CellModelId = 'animal' | 'vegetal' | 'procariotica' | 'mitocondria' | 'cloroplasto' | 'mitose' | 'meiose';
+export type CellModelId = 'animal' | 'vegetal' | 'procariotica' | 'mitocondria' | 'cloroplasto' | 'mitose' | 'meiose' | 'fissao';
 
 export interface CellModelInfo extends LabModelInfo<CellModelId> {
   kind: 'celula' | 'detalhe' | 'processo';
@@ -108,6 +108,16 @@ export const CELL_MODELS: CellModelInfo[] = [
     structures: ['envoltorio-cloroplasto', 'estroma', 'tilacoides', 'lamelas-estromais', 'graos-de-amido', 'dna-cloroplasto'],
     detailOf: 'cloroplastos',
     processes: ['fotossintese-cloro'],
+  },
+  {
+    id: 'fissao',
+    label: 'Fissão binária (bactéria)',
+    short: 'Fissão binária',
+    kind: 'processo',
+    realSize: 'bacilo de cerca de 2 µm de comprimento',
+    summary: 'Bactéria em forma de bastonete se dividindo por fissão binária: replicação do cromossomo circular, alongamento, septo e separação.',
+    structures: ['parede-celular-bacteriana', 'membrana-plasmatica', 'nucleoide', 'plasmideos', 'ribossomos-70s'],
+    processes: ['fissao'],
   },
   {
     id: 'mitose',

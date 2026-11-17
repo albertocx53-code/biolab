@@ -41,9 +41,9 @@ describe('Laboratório de Células — catálogo', () => {
 });
 
 describe('Laboratório de Células — modelos 3D procedurais', () => {
-  for (const info of CELL_MODELS.filter((m) => m.id !== 'mitose' && m.id !== 'meiose')) {
+  for (const info of CELL_MODELS.filter((m) => m.id !== 'mitose' && m.id !== 'meiose' && m.id !== 'fissao')) {
     it(`${info.label}: cada estrutura listada tem malhas e cada malha tem conteúdo`, () => {
-      const built = buildCellModel(info.id as Exclude<typeof info.id, 'mitose' | 'meiose'>);
+      const built = buildCellModel(info.id as Exclude<typeof info.id, 'mitose' | 'meiose' | 'fissao'>);
       const ids = built.meshes.map((m) => m.id);
       expect(new Set(ids).size).toBe(ids.length);
       const structures = new Set(built.meshes.map((m) => m.structure));
@@ -104,5 +104,26 @@ describe('Laboratório de Células — meiose', () => {
     poseMeiosis(model, 9, get);
     expect(get('membrana-a1')!.scale.x).toBe(1);
     expect(get('membrana-plasmatica')!.scale.x).toBeLessThan(0.01);
+  });
+});
+
+describe('fissão binária', () => {
+  it('duplica o nucleoide, afasta as cópias e termina com duas células', async () => {
+    const { buildFission, poseFission } = await import('@/laboratories/cells/fission');
+    const model = buildFission();
+    const meshes = new Map(model.meshes.map((m) => [m.id, new THREE.Mesh(m.geometry)]));
+    const get = (id: string) => meshes.get(id);
+    poseFission(0, get);
+    expect(get('nucleoide-b')!.scale.x).toBeLessThan(0.01);
+    expect(get('parede-a')!.scale.x).toBeLessThan(0.01);
+    poseFission(2.5, get);
+    expect(get('nucleoide-b')!.scale.x).toBeCloseTo(1, 2);
+    expect(get('nucleoide-a')!.position.y - get('nucleoide-b')!.position.y).toBeGreaterThan(1);
+    poseFission(4, get);
+    expect(get('parede-celular-bacteriana')!.scale.x).toBeLessThan(0.01);
+    expect(get('parede-a')!.position.y).toBeGreaterThan(0.9);
+    expect(get('parede-b')!.position.y).toBeLessThan(-0.9);
+    const structures = new Set(model.meshes.map((m) => m.structure));
+    for (const s of CELL_MODELS.find((m) => m.id === 'fissao')!.structures) expect(structures.has(s), `fissao: ${s} sem malha`).toBe(true);
   });
 });

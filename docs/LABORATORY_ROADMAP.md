@@ -24,7 +24,7 @@ componente em `laboratories/<lab>/`.
 - Rins, orelha interna e encéfalo detalhado (ver `MODEL_LICENSES.md`).
 - 148 nomes ainda sem tradução para o português (aparecem em inglês/latim).
 - Conteúdo curado para ~50 estruturas; as demais mostram nome, sistema e o aviso "em elaboração".
-- Processos animados (batimento cardíaco, respiração, contração muscular).
+- Processos animados de respiração e contração muscular (circulação e ciclo cardíaco já existem em `laboratories/human/CirculationLayer.tsx`).
 - Modelo feminino (o Z-Anatomy é masculino).
 
 ## Motor procedural compartilhado
@@ -37,9 +37,17 @@ caminhos) e o relógio das animações. Um novo laboratório procedural precisa 
 
 ## Células: pendências
 
-- Meiose, transporte ativo/difusão facilitada e endocitose como animações próprias.
-- Citoesqueleto (microtúbulos e filamentos) e peroxissomos com mais detalhe.
+- Transporte ativo/difusão facilitada e endocitose como animações próprias.
+- Conjugação bacteriana animada.
 - Revisão pedagógica dos textos.
+
+## Roteiros de aula
+
+`data/biology/lessons/` guarda os roteiros (`Lesson`: unidade, série, duração, objetivos, seções com
+botões de ação, termos-chave, perguntas, erros comuns, referências). `components/laboratory/LessonsPanel.tsx`
+os mostra; cada laboratório traduz as ações (`structure`, `process`, `model`, `group`) para o seu motor
+(`runLessonAction` em `ProceduralLab` e em `HumanLab`). `tests/unit/lessons.test.ts` garante que todo id
+citado existe no laboratório.
 
 ## Plantas: pendências
 

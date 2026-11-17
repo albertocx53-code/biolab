@@ -725,7 +725,7 @@ function chloroplastDetail(): BuiltModel {
   return { meshes, anchors, preset: presetFor(6.4, [0, 0, 0], 0.62, 0.15) };
 }
 
-const BUILDERS: Record<Exclude<CellModelId, 'mitose' | 'meiose'>, () => BuiltModel> = {
+const BUILDERS: Record<Exclude<CellModelId, 'mitose' | 'meiose' | 'fissao'>, () => BuiltModel> = {
   animal: animalCell,
   vegetal: plantCell,
   procariotica: prokaryote,
@@ -733,6 +733,6 @@ const BUILDERS: Record<Exclude<CellModelId, 'mitose' | 'meiose'>, () => BuiltMod
   cloroplasto: chloroplastDetail,
 };
 
-export function buildCellModel(id: Exclude<CellModelId, 'mitose' | 'meiose'>): BuiltModel {
+export function buildCellModel(id: Exclude<CellModelId, 'mitose' | 'meiose' | 'fissao'>): BuiltModel {
   return BUILDERS[id]();
 }

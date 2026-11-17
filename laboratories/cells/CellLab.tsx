@@ -9,6 +9,8 @@ import { buildMitosis, MITOSIS_PRESET } from './mitosis';
 import { MitosisView } from './MitosisView';
 import { buildMeiosis, MEIOSIS_PRESET } from './meiosis';
 import { MeiosisView } from './MeiosisView';
+import { buildFission, FISSION_PRESET } from './fission';
+import { FissionView } from './FissionView';
 import { ProcessLayer } from './ProcessLayer';
 import { CELL_PROCESSES } from './processes';
 
@@ -31,7 +33,16 @@ function buildScene(id: string): LabScene {
       render: (p) => <MeiosisView model={meiosis} {...p} />,
     };
   }
-  const built = buildCellModel(id as Exclude<CellModelId, 'mitose' | 'meiose'>);
+  if (id === 'fissao') {
+    const fission = buildFission();
+    return {
+      meshes: fission.meshes,
+      preset: FISSION_PRESET,
+      anchors: {},
+      render: (p) => <FissionView model={fission} {...p} />,
+    };
+  }
+  const built = buildCellModel(id as Exclude<CellModelId, 'mitose' | 'meiose' | 'fissao'>);
   return { meshes: built.meshes, preset: built.preset, anchors: built.anchors };
 }
 
@@ -59,7 +70,7 @@ const CONFIG: ProceduralLabConfig = {
   processes: CELL_PROCESSES,
   buildScene,
   ProcessLayer,
-  autoProcess: { mitose: 'mitose', meiose: 'meiose' },
+  autoProcess: { mitose: 'mitose', meiose: 'meiose', fissao: 'fissao' },
   groupName: (id) => (id === 'nucleo' ? 'Núcleo (nucleoplasma)' : CELL_CONTENT[id]?.name),
 };
 

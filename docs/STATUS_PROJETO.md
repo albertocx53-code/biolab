@@ -1,6 +1,6 @@
 # Status do projeto
 
-Atualizado em 11/11/2026 — **laboratório de Plantas**.
+Atualizado em 17/11/2026 — **células orgânicas, coração/circulação, meiose, fissão binária e roteiros de aula**.
 
 ## Pronto e testado
 
@@ -16,9 +16,11 @@ Atualizado em 11/11/2026 — **laboratório de Plantas**.
 | Perfis de qualidade, carregamento sob demanda, recuperação de contexto WebGL, liberação de memória | ✅ |
 | Contrato Explorer → Studio e controle por plano | ✅ |
 | Layout em celular | ✅ (testado em emulação) |
-| Laboratório de Células: células animal, vegetal e procariótica com ~45 estruturas clicáveis | ✅ |
-| Células: mitocôndria e cloroplasto em detalhe, mitose em 6 fases | ✅ |
-| Células: animações de síntese de proteínas, respiração (célula e mitocôndria), fotossíntese (célula e cloroplasto), osmose e flagelo | ✅ |
+| Laboratório de Células: células animal, vegetal e procariótica (Gram-negativa) com visual orgânico (ruído, borda de Fresnel, membranas em dois tons) e ~55 estruturas clicáveis (microvilosidades, citoesqueleto, plasmodesmos, tonoplasto, amiloplastos, membrana externa, periplasma, inclusões…) | ✅ |
+| Células: mitocôndria e cloroplasto em detalhe, mitose em 6 fases, meiose em 9 fases com crossing-over, fissão binária em 4 etapas | ✅ |
+| Células: animações de síntese de proteínas, respiração (célula e mitocôndria), fotossíntese (célula e cloroplasto), osmose e flagelos peritríquios girando | ✅ |
+| Corpo humano: vasos visíveis por padrão, vista "Coração e circulação", corte coronal do coração (valvas e músculos papilares), animações do caminho do sangue e do ciclo cardíaco, seleção que mantém a cor do órgão | ✅ |
+| Roteiros de aula (painel "Aulas"): 11 de citologia, 9 de corpo humano, 3 de plantas, com objetivos, botões que controlam o 3D, termos-chave, perguntas e erros comuns | ✅ (texto pendente de revisão pedagógica) |
 | Laboratório de Plantas: planta com flores, flor em corte, semente, folha, caule e raiz em corte, com ~55 estruturas clicáveis | ✅ |
 | Plantas: animações de transporte de seiva, transpiração, fotossíntese (planta e folha), estômatos, absorção pela raiz, seiva no caule, polinização, fecundação e germinação | ✅ |
 
@@ -27,7 +29,8 @@ Atualizado em 11/11/2026 — **laboratório de Plantas**.
 | Item | Situação |
 |---|---|
 | Laboratórios de Animais, Genética, Microrganismos | Fundação pronta; sem modelos |
-| Células: meiose e transporte pela membrana animados | Próxima etapa do laboratório |
+| Células: transporte ativo/endocitose animados | Próxima etapa do laboratório |
+| Corpo humano: rins, encéfalo e órgãos femininos não existem no modelo (os roteiros avisam) | Ver MODEL_LICENSES.md |
 | Geradores do Studio | Fase 2; a interface não os anuncia como funcionais |
 | Rins, orelha interna, encéfalo detalhado | Excluídos por licença (ver MODEL_LICENSES.md) |
 | Revisão do conteúdo por professor | Pendente |

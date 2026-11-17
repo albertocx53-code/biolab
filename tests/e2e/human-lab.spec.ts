@@ -43,6 +43,29 @@ test.describe('Laboratório Corpo Humano', () => {
     expect(await page.evaluate(() => (window as any).__biolab.viewer.getState().selectedId)).toBe('coracao');
   });
 
+  test('coração e circulação: vasos visíveis, corte do coração e animação do sangue', async ({ page }) => {
+    expect(await page.evaluate(() => (window as any).__biolab.viewer.getState().groupVisible.vasos)).toBe(true);
+    await page.getByRole('button', { name: 'Ver coração e vasos' }).click();
+    await page.waitForTimeout(500);
+    const st = await page.evaluate(() => (window as any).__biolab.viewer.getState());
+    expect(st.groupVisible.coracao && st.groupVisible.vasos).toBe(true);
+    expect(st.groupOpacity.respiratorio).toBeLessThan(0.5);
+    await page.getByRole('button', { name: 'Corte do coração' }).click();
+    await expect(page.getByRole('button', { name: 'Fechar o coração' })).toBeVisible();
+    await page.getByRole('button', { name: /Caminho do sangue/ }).click();
+    await expect(page.getByTestId('process-player')).toBeVisible();
+    await page.getByTestId('process-player').getByRole('button', { name: 'Fechar animação' }).click();
+  });
+
+  test('roteiros de aula: um botão do roteiro mostra um sistema e seleciona um órgão', async ({ page }) => {
+    await page.getByTestId('lessons-toggle').click();
+    await expect(page.getByTestId('lessons-panel')).toBeVisible();
+    await page.getByTestId('lesson-sistema-digestorio').click();
+    await page.locator('[data-testid=lesson-action][data-structure=stomach]').first().click();
+    await page.waitForTimeout(500);
+    expect(await page.evaluate(() => (window as any).__biolab.viewer.getState().selectedId)).toBe('stomach');
+  });
+
   test('busca, foco, isolamento e ligação com o Studio', async ({ page }) => {
     await page.getByRole('combobox', { name: 'Buscar estrutura anatômica' }).fill('testiculo');
     await page.keyboard.press('Enter');

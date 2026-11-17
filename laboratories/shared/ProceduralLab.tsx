@@ -7,7 +7,9 @@ import { LabCanvas } from '@/components/3d/LabCanvas';
 import { SceneSync } from '@/components/3d/SceneSync';
 import { SelectionLabel } from '@/components/3d/SelectionLabel';
 import { LayersPanel } from '@/components/laboratory/LayersPanel';
+import { LessonsPanel } from '@/components/laboratory/LessonsPanel';
 import { ScientificPanel } from '@/components/laboratory/ScientificPanel';
+import { lessonsFor, type LessonAction } from '@/data/biology/lessons';
 import { SearchBox, type SearchBoxHandle } from '@/components/laboratory/SearchBox';
 import { QualityMenu } from '@/components/laboratory/QualityMenu';
 import { ViewerToolbar, type ViewButton } from '@/components/laboratory/ViewerToolbar';
@@ -98,6 +100,10 @@ export function ProceduralLab({ config: cfg, canUseStudio, tierLabel }: { config
   const [dark, setDark] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
+  const [lessonsOpen, setLessonsOpen] = useState(false);
+  const [lessonId, setLessonId] = useState<string | null>(null);
+  const pendingProcess = useRef<string | null>(null);
+  const lessons = useMemo(() => lessonsFor(catalog.labId), [catalog]);
   const [sideOpen, setSideOpen] = useState(false);
   const [focusMesh, setFocusMesh] = useState<string | null>(null);
   const pending = useRef<string | null>(null);
@@ -175,6 +181,11 @@ export function ProceduralLab({ config: cfg, canUseStudio, tierLabel }: { config
       pending.current = null;
       setTimeout(() => selectStructureRef.current(id), 120);
     }
+    if (pendingProcess.current) {
+      const pid = pendingProcess.current;
+      pendingProcess.current = null;
+      if (info.processes.includes(pid)) setTimeout(() => useProcess.getState().start(pid), 120);
+    }
   }, [groups, modelId, info]);
 
   const switchModel = useCallback((id: string) => {
@@ -208,6 +219,30 @@ export function ProceduralLab({ config: cfg, canUseStudio, tierLabel }: { config
   );
   const selectStructureRef = useRef(selectStructure);
   selectStructureRef.current = selectStructure;
+
+  /** A button of a lesson script: show a structure, start an animation or open another model. */
+  const runLessonAction = useCallback(
+    (a: LessonAction) => {
+      if (a.model && a.model !== modelId && catalog.model(a.model)) switchModel(a.model);
+      if (a.structure) selectStructure(a.structure);
+      if (a.process) {
+        const p = useProcess.getState();
+        if (p.id === a.process) {
+          p.stop();
+          return;
+        }
+        if (info.processes.includes(a.process) && !(a.model && a.model !== modelId)) p.start(a.process);
+        else {
+          const target = a.model && catalog.model(a.model) ? a.model : catalog.models.find((m) => m.processes.includes(a.process!))?.id;
+          if (target && target !== modelId) {
+            pendingProcess.current = a.process;
+            switchModel(target);
+          }
+        }
+      }
+    },
+    [catalog, info, modelId, selectStructure, switchModel],
+  );
 
   const onPick = useCallback(
     (meshId: string) => {
@@ -344,7 +379,7 @@ export function ProceduralLab({ config: cfg, canUseStudio, tierLabel }: { config
 
   const pres = s.presentation;
   const hideUi = s.uiHidden;
-  const showRight = !hideUi && panelOpen && !!selected;
+  const showRight = !hideUi && ((panelOpen && !!selected) || lessonsOpen);
   const toggleTheme = () =>
     setDark((d) => {
       try {
@@ -419,6 +454,11 @@ export function ProceduralLab({ config: cfg, canUseStudio, tierLabel }: { config
               <Icon name={dark ? 'sun' : 'moon'} size={17} />
             </button>
             <QualityMenu />
+            {lessons.length > 0 && (
+              <button type="button" className={`btn h-10 rounded-full ${lessonsOpen ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setLessonsOpen((v) => !v)} aria-pressed={lessonsOpen} title="Roteiros de aula" data-testid="lessons-toggle">
+                <Icon name="book" size={16} /> <span className="hidden sm:inline">Aulas</span>
+              </button>
+            )}
             <button type="button" className="icon-btn hidden rounded-full sm:inline-grid" onClick={() => setShowHelp(true)} aria-label="Atalhos de teclado" title="Atalhos (?)">
               <Icon name="keyboard" />
             </button>
@@ -525,8 +565,28 @@ export function ProceduralLab({ config: cfg, canUseStudio, tierLabel }: { config
       {!hideUi && processId && <ProcessPlayer processes={processes} large={pres} docked={!showRight} />}
       {!hideUi && <ViewerToolbar views={VIEWS} />}
 
+      {/* ---------- lessons panel */}
+      {showRight && lessonsOpen && (
+        <aside className={`float-card absolute z-20 overflow-hidden max-lg:inset-x-2 max-lg:bottom-2 max-lg:h-[55%] lg:top-20 lg:right-4 lg:bottom-20 ${pres ? 'lg:w-[460px]' : 'lg:w-[400px]'}`}>
+          <LessonsPanel
+            lessons={lessons}
+            lessonId={lessonId}
+            onLesson={setLessonId}
+            onAction={runLessonAction}
+            onClose={() => setLessonsOpen(false)}
+            selectedName={selected?.namePtBR ?? null}
+            onOpenSelected={() => {
+              setLessonsOpen(false);
+              setPanelOpen(true);
+            }}
+            large={pres}
+            activeProcess={processId}
+          />
+        </aside>
+      )}
+
       {/* ---------- scientific panel */}
-      {showRight && selected && (
+      {showRight && !lessonsOpen && selected && (
         <aside className={`float-card absolute z-20 overflow-hidden max-lg:inset-x-2 max-lg:bottom-2 max-lg:h-[55%] lg:top-20 lg:right-4 lg:bottom-20 ${pres ? 'lg:w-[440px]' : 'lg:w-[380px]'}`}>
           <ScientificPanel
             structure={selected}
