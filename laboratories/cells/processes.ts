@@ -121,4 +121,26 @@ export const CELL_PROCESSES: Record<string, CellProcess> = {
       { title: 'Citocinese', text: 'O citoplasma se divide: nas células animais, um anel contrátil estrangula a célula ao meio, originando duas células-filhas geneticamente iguais.', seconds: 5 },
     ],
   },
+  meiose: {
+    id: 'meiose',
+    title: 'Meiose: duas divisões, quatro células haploides',
+    namedSteps: true,
+    structures: ['cromossomos-homologos', 'quiasma', 'cromatide-irma', 'fuso-mitotico', 'centrossomo', 'envoltorio-nuclear'],
+    note: `${TIME} Modelo com 2n = 4 (vermelho: origem materna; azul: origem paterna). Ocorre na formação dos gametas (espermatozoides e óvulos).`,
+    steps: [
+      { title: 'Interfase', text: 'Antes da meiose a célula duplica o DNA (fase S): cada cromossomo passa a ter duas cromátides-irmãs idênticas. A célula é diploide (2n = 4): dois pares de cromossomos homólogos.', seconds: 4 },
+      {
+        title: 'Prófase I',
+        text: 'Os cromossomos se condensam e os homólogos se emparelham (sinapse), formando tétrades. Cromátides de homólogos trocam pedaços: é o crossing-over, visível como quiasmas. O envoltório nuclear se desfaz e o fuso se forma.',
+        seconds: 7,
+      },
+      { title: 'Metáfase I', text: 'Os pares de homólogos (e não cromossomos isolados) se alinham na placa equatorial. A orientação de cada par é ao acaso: é a segregação independente, fonte de variabilidade.', seconds: 4 },
+      { title: 'Anáfase I', text: 'Os homólogos se separam e vão para polos opostos. As cromátides-irmãs continuam unidas pelo centrômero: cada polo recebe um cromossomo de cada par, ainda duplicado.', seconds: 4 },
+      { title: 'Telófase I', text: 'Chegando aos polos, os cromossomos podem se descondensar um pouco e o citoplasma se divide (citocinese I). Resultam duas células haploides (n = 2), cada uma com cromossomos duplicados. Não há nova duplicação de DNA.', seconds: 5 },
+      { title: 'Prófase II', text: 'Em cada célula-filha, os cromossomos voltam a se condensar e um novo fuso se forma, perpendicular ao primeiro. A meiose II é muito parecida com uma mitose.', seconds: 4 },
+      { title: 'Metáfase II', text: 'Os cromossomos (cada um com duas cromátides) se alinham na placa equatorial de cada célula.', seconds: 4 },
+      { title: 'Anáfase II', text: 'Agora os centrômeros se dividem e as cromátides-irmãs se separam, indo para polos opostos, como na mitose.', seconds: 4 },
+      { title: 'Telófase II', text: 'Formam-se quatro núcleos e o citoplasma se divide de novo (citocinese II). Resultam quatro células haploides (n = 2), geneticamente diferentes entre si por causa do crossing-over e da segregação independente.', seconds: 5 },
+    ],
+  },
 };

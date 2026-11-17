@@ -277,7 +277,7 @@ function FlagellumSpin({ anchors }: { anchors: Anchors }) {
 /** Renders the animation for the active process inside the canvas. */
 export function ProcessLayer({ anchors }: { anchors: Anchors; modelId?: string }) {
   const id = useProcess((s) => s.id);
-  if (!id || id === 'mitose') return null;
+  if (!id || id === 'mitose' || id === 'meiose') return null;
   return (
     <group key={id}>
       {id === 'secrecao' && <Secretion anchors={anchors} />}

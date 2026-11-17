@@ -420,3 +420,87 @@ export function loop(radius: number, r: Rng, n = 14) {
     return new THREE.Vector3(Math.cos(a) * rr, r.range(-0.15, 0.15) * radius, Math.sin(a) * rr);
   });
 }
+
+/** Multi-octave organic irregularity (large lobes plus fine ripples), deterministic. */
+export const wobble2 =
+  (base: DistFn, amp: number, seed = 1, fine = 0.3): DistFn =>
+  (d) => {
+    const s = seed * 2.3;
+    const n1 =
+      Math.sin(1.9 * d.x + s) * Math.sin(1.6 * d.y + 0.7 * s) * Math.cos(2.2 * d.z - s) +
+      0.6 * Math.sin(3.4 * d.x - 1.1 * s + 2.0 * d.z) * Math.cos(2.9 * d.y + s) +
+      0.35 * Math.sin(5.1 * d.y + 3.8 * d.z + s);
+    const n2 = Math.sin(9.3 * d.x + 2 * s) * Math.sin(8.1 * d.y - s) * Math.cos(10.7 * d.z + s) + 0.5 * Math.sin(13.1 * d.x + 11.3 * d.z - s) * Math.cos(12.7 * d.y + 2 * s);
+    return base(d) * (1 + amp * (n1 + fine * n2));
+  };
+
+/**
+ * Short rounded protrusions standing on the surface of a shape (microvilli,
+ * pili, surface granules). Skips the removed wedge so the cut stays clean.
+ */
+export function bumps(r: Rng, dist: DistFn, count: number, len: [number, number], radius: number, avoid: Cut | null, keep?: (d: THREE.Vector3) => boolean): THREE.BufferGeometry {
+  const parts: THREE.BufferGeometry[] = [];
+  for (let i = 0; i < count * 4 && parts.length < count; i++) {
+    const d = r.dir();
+    const p = d.clone().multiplyScalar(dist(d));
+    if (avoid && inWedge(p, avoid)) continue;
+    if (keep && !keep(d)) continue;
+    const l = r.range(len[0], len[1]);
+    const g = new THREE.CapsuleGeometry(radius, l, 3, 7);
+    parts.push(place(g, p.clone().addScaledVector(d, l / 2 - radius * 0.5), alignY(d)));
+  }
+  return merge(parts);
+}
+
+/** Capsule bent along an arc (curved mitochondria, bacilli): length 2h, radius r, bend in radians. */
+export function bentCapsule(h: number, r: number, bend: number, seg = 10, radial = 12): THREE.BufferGeometry {
+  const pts: THREE.Vector3[] = [];
+  const n = 24;
+  const R = bend > 1e-3 ? (2 * h) / bend : Infinity;
+  for (let i = 0; i <= n; i++) {
+    const t = i / n - 0.5;
+    if (!Number.isFinite(R)) pts.push(new THREE.Vector3(0, t * 2 * h, 0));
+    else {
+      const a = t * bend;
+      pts.push(new THREE.Vector3(R * (1 - Math.cos(a)), R * Math.sin(a), 0));
+    }
+  }
+  const curve = new THREE.CatmullRomCurve3(pts, false, 'catmullrom');
+  const tubeG = new THREE.TubeGeometry(curve, seg * 2, r, radial, false);
+  const capA = new THREE.SphereGeometry(r, radial, 8);
+  const capB = new THREE.SphereGeometry(r, radial, 8);
+  place(capA, pts[0]);
+  place(capB, pts[n]);
+  return merge([tubeG, capA, capB]);
+}
+
+/** Thin filaments following the inner surface of a shape (cortical actin / cortical microtubules). */
+export function corticalFilaments(r: Rng, dist: DistFn, k: number, count: number, length: number, radius: number, avoid: Cut | null): THREE.BufferGeometry {
+  const parts: THREE.BufferGeometry[] = [];
+  for (let i = 0; i < count * 3 && parts.length < count; i++) {
+    const d = r.dir();
+    const start = d.clone().multiplyScalar(dist(d) * k);
+    if (avoid && inWedge(start, avoid)) continue;
+    // walk along a random tangent direction, re-projected on the surface each step
+    let dir = r.dir();
+    dir.addScaledVector(d, -dir.dot(d)).normalize();
+    const pts = [start.clone()];
+    let p = start.clone();
+    const steps = 8;
+    let ok = true;
+    for (let s = 0; s < steps; s++) {
+      p = p.clone().addScaledVector(dir, length / steps);
+      const n = p.clone().normalize();
+      p = n.multiplyScalar(dist(n) * k);
+      if (avoid && inWedge(p, avoid)) {
+        ok = false;
+        break;
+      }
+      dir.addScaledVector(n, -dir.dot(n)).normalize();
+      pts.push(p.clone());
+    }
+    if (!ok || pts.length < 4) continue;
+    parts.push(tube(pts, radius, false, 24, 4));
+  }
+  return merge(parts);
+}

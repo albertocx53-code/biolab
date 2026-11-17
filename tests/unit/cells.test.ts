@@ -41,9 +41,9 @@ describe('Laboratório de Células — catálogo', () => {
 });
 
 describe('Laboratório de Células — modelos 3D procedurais', () => {
-  for (const info of CELL_MODELS.filter((m) => m.id !== 'mitose')) {
+  for (const info of CELL_MODELS.filter((m) => m.id !== 'mitose' && m.id !== 'meiose')) {
     it(`${info.label}: cada estrutura listada tem malhas e cada malha tem conteúdo`, () => {
-      const built = buildCellModel(info.id as Exclude<typeof info.id, 'mitose'>);
+      const built = buildCellModel(info.id as Exclude<typeof info.id, 'mitose' | 'meiose'>);
       const ids = built.meshes.map((m) => m.id);
       expect(new Set(ids).size).toBe(ids.length);
       const structures = new Set(built.meshes.map((m) => m.structure));
@@ -73,5 +73,36 @@ describe('Laboratório de Células — modelos 3D procedurais', () => {
     poseMitosis(model, 0.2, get); // interfase: núcleo intacto, cromossomos ainda não condensados
     expect(get('envoltorio-nuclear')!.scale.x).toBeCloseTo(1);
     expect(get('cromatide-1a')!.scale.x).toBeLessThan(0.01);
+  });
+});
+
+describe('Laboratório de Células — meiose', () => {
+  it('homólogos se separam na anáfase I e cromátides-irmãs só na anáfase II', async () => {
+    const { buildMeiosis, poseMeiosis, cellOf } = await import('@/laboratories/cells/meiosis');
+    const model = buildMeiosis();
+    const meshes = new Map(model.meshes.map((d) => [d.id, new THREE.Mesh(d.geometry)]));
+    const get = (id: string) => meshes.get(id);
+    poseMeiosis(model, 2.6, get); // metáfase I: bivalentes na placa (x ≈ 0)
+    for (let i = 1; i <= 4; i++) expect(Math.abs(get(`cromatide-${i}a`)!.position.x), `crom ${i}`).toBeLessThan(0.12);
+    poseMeiosis(model, 4.0, get); // fim da anáfase I: homólogos em polos opostos, irmãs juntas
+    const sideOf = (i: number) => Math.sign(get(`cromatide-${i}a`)!.position.x);
+    expect(sideOf(1)).not.toBe(sideOf(2));
+    expect(sideOf(3)).not.toBe(sideOf(4));
+    expect(get('cromatide-1a')!.position.distanceTo(get('cromatide-1b')!.position)).toBeLessThan(0.15);
+    expect(sideOf(1) < 0 ? 'a' : 'b').toBe(cellOf(model.chromosomes[0]));
+    poseMeiosis(model, 8.0, get); // fim da anáfase II: irmãs separadas em y dentro de cada célula
+    expect(get('cromatide-1a')!.position.y).toBeLessThan(-0.3);
+    expect(get('cromatide-1b')!.position.y).toBeGreaterThan(0.3);
+    expect(Math.sign(get('cromatide-1a')!.position.x)).toBe(sideOf(1));
+    // crossing-over trocou a ponta de uma cromátide de cada homólogo
+    poseMeiosis(model, 2.2, get);
+    expect(get('ponta-1b-b')!.scale.y).toBeGreaterThan(0.5); // cromátide materna com ponta azul
+    expect(get('ponta-2a-r')!.scale.y).toBeGreaterThan(0.5); // cromátide paterna com ponta vermelha
+    poseMeiosis(model, 0.5, get);
+    expect(get('ponta-1b-b')!.scale.y).toBeLessThan(0.01);
+    // quatro células ao final
+    poseMeiosis(model, 9, get);
+    expect(get('membrana-a1')!.scale.x).toBe(1);
+    expect(get('membrana-plasmatica')!.scale.x).toBeLessThan(0.01);
   });
 });

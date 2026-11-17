@@ -34,10 +34,11 @@ export function SceneSync({ library, meshesOf }: { library: MaterialLibrary; mes
           if (isolated.has(id)) visible = !hidden;
           else if (visible) mat = library.ghost;
         }
-        if (visible && selected.has(id)) mat = library.highlight;
-        else if (visible && s.hoveredMeshId === id && mat !== library.ghost) mat = library.hoverMat;
+        const base = mesh.userData.base as THREE.Material;
+        if (visible && selected.has(id)) mat = library.highlightFor(base);
+        else if (visible && s.hoveredMeshId === id && mat !== library.ghost) mat = library.hoverFor(base);
         mesh.visible = visible;
-        mesh.renderOrder = mat === library.highlight ? 10 : 0;
+        mesh.renderOrder = library.isHighlight(mat) ? 10 : 0;
         if (mesh.material !== mat) mesh.material = mat;
         // Ghosted / transparent meshes must not steal clicks from what is behind them.
         mesh.userData.raycast ??= mesh.raycast;

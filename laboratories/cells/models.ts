@@ -11,8 +11,11 @@ import { presetFor as sharedPreset, type BuiltModel, type MeshDef } from '@/labo
 
 export type { BuiltModel, MeshDef };
 import {
+  alignY,
   basisQuat,
+  bumps,
   capsuleY,
+  corticalFilaments,
   cisterna,
   cutFaces,
   dots,
@@ -24,6 +27,7 @@ import {
   paint,
   patch,
   place,
+  randomQuat,
   rng,
   scaled,
   shell,
@@ -33,6 +37,7 @@ import {
   tube,
   wall,
   wobble,
+  wobble2,
   type Cut,
   type DistFn,
   type Rng,
@@ -74,25 +79,33 @@ const toCamera = (phi = VIEW_PHI) => new THREE.Vector3(Math.sin(phi), 0.45, Math
 
 /** Nucleus with cut-away envelope, nuclear pores, nucleoplasm face, nucleolus and chromatin. */
 function nucleus(r: Rng, centre: THREE.Vector3, radius: number, meshes: MeshDef[], anchors: BuiltModel['anchors']) {
-  const nd = wobble(ellipsoid(radius, radius * 0.9, radius), 0.03, 7);
-  const env = paint(wall(nd, 0.93, CUT, [64, 36]), '#8C6BC4');
-  const pores: THREE.Vector3[] = [];
-  for (let i = 0; i < 60; i++) {
+  const nd = wobble2(ellipsoid(radius, radius * 0.9, radius), 0.035, 7, 0.2);
+  const env = merge([paint(shell(nd, CUT, [72, 40]), '#8C6BC4'), paint(shell(scaled(nd, 0.93), CUT, [72, 40]), '#A98BD9'), paint(cutFaces(nd, scaled(nd, 0.93), CUT, 40), '#6E4FA8')]);
+  // nuclear pores: ring-shaped protein complexes crossing both membranes
+  const pores: THREE.BufferGeometry[] = [];
+  for (let i = 0; i < 400 && pores.length < 130; i++) {
     const d = r.dir();
-    const p = d.multiplyScalar(nd(d) * 1.004);
-    if (!inWedge(p, CUT)) pores.push(p);
+    const p = d.clone().multiplyScalar(nd(d) * 0.985);
+    if (inWedge(p, CUT)) continue;
+    pores.push(place(new THREE.TorusGeometry(radius * 0.05, radius * 0.016, 6, 12), p, alignY(d)));
   }
-  const poreGeo = paint(dots(pores, radius * 0.045, 1), '#4B3B78');
+  const poreGeo = paint(merge(pores), '#4B3B78');
   meshes.push({ id: 'envoltorio-nuclear', structure: 'envoltorio-nuclear', geometry: place(merge([env, poreGeo]), centre) });
-  meshes.push({ id: 'nucleoplasma', structure: 'nucleo', geometry: place(cutFaces(scaled(nd, 0.93), null, CUT, 36), centre) });
+  meshes.push({ id: 'nucleoplasma', structure: 'nucleo', geometry: place(cutFaces(scaled(nd, 0.93), null, CUT, 40), centre) });
   const nucleolusC = new THREE.Vector3(radius * 0.08, radius * 0.12, radius * 0.1);
-  const nl = new THREE.IcosahedronGeometry(radius * 0.3, 3);
-  meshes.push({ id: 'nucleolo', structure: 'nucleolo', geometry: place(nl, nucleolusC.clone().add(centre)) });
+  meshes.push({ id: 'nucleolo', structure: 'nucleolo', geometry: place(blob(radius * 0.3, 17), nucleolusC.clone().add(centre)) });
+  // chromatin: loose euchromatin threads plus thicker heterochromatin clumps near the envelope
   const strands: THREE.BufferGeometry[] = [];
-  for (let s = 0; s < 4; s++) {
-    const start = r.dir().multiplyScalar(radius * 0.5);
-    const pts = tangle(r, start, 46, radius * 0.11, (p) => inside(nd, p, 0.84) && p.distanceTo(nucleolusC) > radius * 0.36);
-    strands.push(tube(pts, radius * 0.022, false, pts.length * 5, 5));
+  for (let s = 0; s < 7; s++) {
+    const start = r.dir().multiplyScalar(radius * r.range(0.3, 0.6));
+    const pts = tangle(r, start, 44, radius * 0.11, (p) => inside(nd, p, 0.86) && p.distanceTo(nucleolusC) > radius * 0.36);
+    strands.push(tube(pts, radius * (s < 4 ? 0.02 : 0.034), false, pts.length * 5, 5));
+  }
+  for (let s = 0; s < 5; s++) {
+    const d = r.dir();
+    const at = d.clone().multiplyScalar(nd(d) * 0.78);
+    if (inWedge(at, CUT)) continue;
+    strands.push(place(blob(radius * r.range(0.08, 0.13), 40 + s), at));
   }
   meshes.push({ id: 'cromatina', structure: 'cromatina', geometry: place(merge(strands), centre) });
   anchors.nucleus = [centre.clone()];
@@ -220,75 +233,155 @@ function slicedOrganelles(
   return centres;
 }
 
+// ===================================================================== shared organelle builders (v2)
+
+/** Pair of centrioles at right angles, with the pericentriolar material as a soft blob. */
+function centrosome(at: THREE.Vector3, size: number) {
+  const pair = centriolePair(at, size);
+  const pcm = place(blob(size * 0.75, 31), at);
+  return merge([paint(pair, '#1FA39A'), paint(pcm, '#B9E7E2')]);
+}
+
+/** Cytoskeleton: microtubules radiating from the centrosome plus a cortical web of actin under the membrane. */
+function cytoskeleton(r: Rng, from: THREE.Vector3, cell: DistFn, nd: DistFn | null, nucleusAt: THREE.Vector3, count: number, cut: Cut) {
+  const tubes: THREE.BufferGeometry[] = [];
+  for (let i = 0; i < count * 3 && tubes.length < count; i++) {
+    const d = r.dir();
+    const end = d.clone().multiplyScalar(cell(d) * r.range(0.8, 0.93));
+    if (inWedge(end, cut)) continue;
+    // bend gently, avoid crossing the nucleus
+    const mid = from.clone().lerp(end, 0.5).add(r.dir().multiplyScalar(0.12));
+    if (nd && inside(nd, mid.clone().sub(nucleusAt), 1.15)) continue;
+    tubes.push(tube([from.clone(), mid, end], 0.0055, false, 18, 5));
+  }
+  const micro = paint(merge(tubes), '#A7DED4');
+  const actin = paint(corticalFilaments(r, cell, 0.95, 70, 0.55, 0.0045, cut), '#D9A3B4');
+  return merge([micro, actin]);
+}
+
+/** Smooth ER: an interconnected web of tubules in a region of the cytoplasm. */
+function smoothER(r: Rng, seeds: THREE.Vector3[], ok: (p: THREE.Vector3) => boolean, steps: number, stepLen: number, radius: number) {
+  const parts: THREE.BufferGeometry[] = [];
+  for (const s of seeds) {
+    const pts = tangle(r, s, steps, stepLen, ok);
+    parts.push(tube(pts, radius, false, pts.length * 5, 6));
+    // a branch from the middle of each tubule gives the network its mesh-like look
+    const b = pts[Math.floor(pts.length / 2)];
+    const branch = tangle(r, b, Math.floor(steps / 2), stepLen, ok);
+    parts.push(tube(branch, radius * 0.9, false, branch.length * 5, 6));
+  }
+  return merge(parts);
+}
+
+/** Many curved mitochondria, cut towards the camera, placed where `ok` allows. */
+function mitochondria(r: Rng, count: number, dims: [number, number], ok: (p: THREE.Vector3) => boolean, space: Space, box: number, meshes: MeshDef[], prefix = 'mitocondria') {
+  const centres: THREE.Vector3[] = [];
+  for (let i = 0; i < count; i++) {
+    const h = dims[0] * r.range(0.7, 1.45);
+    const rad = dims[1] * r.range(0.85, 1.15);
+    const axis = r.dir();
+    const reach = h + rad;
+    let placed: THREE.Vector3 | null = null;
+    for (let t = 0; t < 300 && !placed; t++) {
+      const p = new THREE.Vector3(r.range(-box, box), r.range(-box, box), r.range(-box, box));
+      const a = p.clone().addScaledVector(axis, reach);
+      const b = p.clone().addScaledVector(axis, -reach);
+      if (ok(p) && ok(a) && ok(b) && space.free(p, reach * 0.8)) placed = p;
+    }
+    if (!placed) continue;
+    space.take(placed, reach * 0.8);
+    const g = slicedCapsule(h, rad, '#D65A33', '#F08A5B', '#F9C9A4', 'cristae', r);
+    meshes.push({ id: `${prefix}-${i + 1}`, structure: 'mitocondria', geometry: place(g, placed, basisQuat(axis, toCamera())) });
+    centres.push(placed);
+  }
+  return centres;
+}
+
 // ===================================================================== animal
 
 function animalCell(): BuiltModel {
   const r = rng(11);
   const meshes: MeshDef[] = [];
   const anchors: BuiltModel['anchors'] = {};
-  const cell = wobble(ellipsoid(1.5, 1.12, 1.32), 0.045, 3);
-  const memIn = scaled(cell, 0.975);
-  meshes.push({ id: 'membrana-plasmatica', structure: 'membrana-plasmatica', geometry: wall(cell, 0.975, CUT, [96, 56]) });
+  // living cells are lumpy, not perfect eggs: two octaves of irregularity
+  const cell = wobble2(ellipsoid(1.55, 1.14, 1.36), 0.055, 3, 0.25);
+  const memIn = scaled(cell, 0.972);
+  const membrane = merge([paint(shell(cell, CUT, [120, 72]), '#DFA384'), paint(shell(memIn, CUT, [120, 72]), '#F4D6C2'), paint(cutFaces(cell, memIn, CUT, 72), '#C98566')]);
+  meshes.push({ id: 'membrana-plasmatica', structure: 'membrana-plasmatica', geometry: membrane });
+  // microvilli: fine finger-like projections over part of the surface (absorptive cells)
+  const topSide = toCamera(VIEW_PHI + 2.2);
+  meshes.push({
+    id: 'microvilosidades',
+    structure: 'microvilosidades',
+    geometry: bumps(r, cell, 360, [0.045, 0.085], 0.0075, CUT, (d) => d.dot(topSide) > 0.3),
+  });
 
-  const NR = 0.44;
-  const nd = nucleus(r, new THREE.Vector3(), NR, meshes, anchors);
-  meshes.push({ id: 'citoplasma', structure: 'citoplasma', geometry: cutFaces(memIn, nd, CUT, 56) });
+  const NR = 0.46;
+  const nucleusAt = new THREE.Vector3(0.05, 0.02, -0.05);
+  const nd = nucleus(r, nucleusAt, NR, meshes, anchors);
+  meshes.push({ id: 'citoplasma', structure: 'citoplasma', geometry: cutFaces(memIn, scaled(nd, 1.0), CUT, 72) });
 
   const space = new Space();
-  space.take(new THREE.Vector3(), NR * 1.9);
+  space.take(nucleusAt, NR * 1.9);
   const ribos: THREE.Vector3[] = [];
-  const inCyto = (p: THREE.Vector3, margin = 0.9) => inside(cell, p, margin) && !inside(nd, p, 1.1);
-  const rer = roughER(r, nd, new THREE.Vector3(), VIEW_PHI + 0.5, VIEW_PHI + 2.9, 4, ribos, (p) => inCyto(p, 0.94));
+  const inCyto = (p: THREE.Vector3, margin = 0.9) => inside(cell, p, margin) && !inside(nd, p.clone().sub(nucleusAt), 1.1);
+  const rer = roughER(r, nd, nucleusAt, VIEW_PHI + 0.45, VIEW_PHI + 3.0, 5, ribos, (p) => inCyto(p, 0.94));
   meshes.push({ id: 'reticulo-endoplasmatico-rugoso', structure: 'reticulo-endoplasmatico-rugoso', geometry: rer.geometry });
   anchors.rer = [rer.anchor];
 
-  // smooth ER: tangled tubules on the other side of the nucleus
-  const ser: THREE.BufferGeometry[] = [];
-  for (let i = 0; i < 7; i++) {
-    const a = VIEW_PHI - r.range(1.0, 2.2);
-    const start = new THREE.Vector3(Math.sin(a) * 0.95, r.range(-0.35, 0.35), Math.cos(a) * 0.9);
-    const pts = tangle(r, start, 16, 0.07, (p) => inCyto(p, 0.86) && p.length() > NR * 1.55 && !inWedge(p, CUT));
-    ser.push(tube(pts, 0.017, false, 90, 6));
+  // smooth ER: a web of tubules continuing from the rough ER on the far side of the nucleus
+  const serSeeds: THREE.Vector3[] = [];
+  for (let i = 0; i < 9; i++) {
+    const a = VIEW_PHI - r.range(0.9, 2.3);
+    serSeeds.push(new THREE.Vector3(Math.sin(a) * 0.95, r.range(-0.4, 0.4), Math.cos(a) * 0.9));
   }
-  meshes.push({ id: 'reticulo-endoplasmatico-liso', structure: 'reticulo-endoplasmatico-liso', geometry: merge(ser) });
-  space.take(new THREE.Vector3(Math.sin(VIEW_PHI - 1.6) * 0.95, 0, Math.cos(VIEW_PHI - 1.6) * 0.95), 0.32);
+  meshes.push({
+    id: 'reticulo-endoplasmatico-liso',
+    structure: 'reticulo-endoplasmatico-liso',
+    geometry: smoothER(r, serSeeds, (p) => inCyto(p, 0.86) && p.distanceTo(nucleusAt) > NR * 1.5 && !inWedge(p, CUT), 14, 0.07, 0.016),
+  });
+  space.take(new THREE.Vector3(Math.sin(VIEW_PHI - 1.6) * 0.95, 0, Math.cos(VIEW_PHI - 1.6) * 0.95), 0.34);
 
   // Golgi between nucleus and membrane, slightly inside the cut-away
-  const gAt = new THREE.Vector3(Math.sin(VIEW_PHI - 0.5) * 0.92, 0.3, Math.cos(VIEW_PHI - 0.5) * 0.92);
-  const go = golgi(r, gAt, new THREE.Vector3(0, 0.1, 0), 0.22);
-  space.take(gAt, 0.36);
+  const gAt = new THREE.Vector3(Math.sin(VIEW_PHI - 0.5) * 0.95, 0.32, Math.cos(VIEW_PHI - 0.5) * 0.95);
+  const go = golgi(r, gAt, new THREE.Vector3(0, 0.1, 0), 0.24);
+  space.take(gAt, 0.38);
   meshes.push({ id: 'complexo-golgiense', structure: 'complexo-golgiense', geometry: go.geometry });
   const exitDir = go.axis.clone();
   const exit = exitDir.clone().multiplyScalar(cell(exitDir) * 0.97);
   const between = go.trans.clone().lerp(exit, 0.5);
-  meshes.push({ id: 'vesiculas', structure: 'vesiculas', geometry: dots([...go.vesicles, between], (i) => (i < 5 ? 0.026 : 0.034), 2) });
+  // transport vesicles around the Golgi plus endocytic vesicles budding from the membrane
+  const endo = membranePoints(r, cell, 0.93, 16, CUT);
+  meshes.push({ id: 'vesiculas', structure: 'vesiculas', geometry: dots([...go.vesicles, between, ...endo], (i) => (i < 5 ? 0.026 : i < go.vesicles.length + 1 ? 0.034 : 0.022), 2) });
   Object.assign(anchors, { golgiCis: [go.cis], golgiTrans: [go.trans], exit: [exit] });
 
-  // centrioles near the nucleus (centrosome)
-  const cAt = new THREE.Vector3(Math.sin(VIEW_PHI + 0.35) * 0.72, 0.5, Math.cos(VIEW_PHI + 0.35) * 0.72);
-  space.take(cAt, 0.14);
-  meshes.push({ id: 'centriolos', structure: 'centriolos', geometry: centriolePair(cAt, 0.13) });
+  // centrosome near the nucleus; microtubules radiate from it to the cell edge
+  const cAt = new THREE.Vector3(Math.sin(VIEW_PHI + 0.35) * 0.74, 0.5, Math.cos(VIEW_PHI + 0.35) * 0.74);
+  space.take(cAt, 0.16);
+  meshes.push({ id: 'centriolos', structure: 'centriolos', geometry: centrosome(cAt, 0.13) });
+  meshes.push({ id: 'citoesqueleto', structure: 'citoesqueleto', geometry: cytoskeleton(r, cAt, cell, nd, nucleusAt, 11, CUT) });
 
-  const mito = slicedOrganelles(r, 11, 'mitocondria', 'mitocondria', [0.13, 0.08], ['#DE6538', '#F08D5E', '#F8C8A0'], 'cristae', (p) => inCyto(p, 0.86), space, 1.4, meshes);
+  const mito = mitochondria(r, 14, [0.13, 0.08], (p) => inCyto(p, 0.86), space, 1.42, meshes);
   anchors.mitochondria = mito;
 
-  for (let i = 0; i < 6; i++) {
-    const rad = r.range(0.05, 0.075);
+  for (let i = 0; i < 8; i++) {
+    const rad = r.range(0.05, 0.08);
     const p = spot(r, 1.4, (q) => inCyto(q, 0.85), space, rad + 0.03);
     if (p) meshes.push({ id: `lisossomo-${i + 1}`, structure: 'lisossomos', geometry: place(blob(rad, i + 2), p) });
   }
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 5; i++) {
     const rad = r.range(0.04, 0.055);
     const p = spot(r, 1.4, (q) => inCyto(q, 0.85), space, rad + 0.03);
     if (p) meshes.push({ id: `peroxissomo-${i + 1}`, structure: 'peroxissomos', geometry: place(blob(rad, i + 9), p) });
   }
-  for (let i = 0; i < 240; i++) {
-    const p = new THREE.Vector3(r.range(-1.5, 1.5), r.range(-1.1, 1.1), r.range(-1.3, 1.3));
+  for (let i = 0; i < 420; i++) {
+    const p = new THREE.Vector3(r.range(-1.55, 1.55), r.range(-1.14, 1.14), r.range(-1.36, 1.36));
     if (inCyto(p, 0.93) && space.free(p, 0.01)) ribos.push(p);
   }
   meshes.push({ id: 'ribossomos', structure: 'ribossomos', geometry: dots(ribos, 0.013) });
   anchors.membrane = membranePoints(r, cell, 0.97, 24);
-  return { meshes, anchors, preset: presetFor(6.2) };
+  anchors.nucleus = [nucleusAt.clone()];
+  return { meshes, anchors, preset: presetFor(6.3) };
 }
 
 function membranePoints(r: Rng, dist: DistFn, k: number, n: number, avoid?: Cut) {
@@ -307,19 +400,35 @@ function plantCell(): BuiltModel {
   const r = rng(23);
   const meshes: MeshDef[] = [];
   const anchors: BuiltModel['anchors'] = {};
-  const wallD = superellipsoid(1.6, 1.18, 1.18, 5);
-  const mem = scaled(wallD, 0.935);
+  // plant cells are pressed against their neighbours: rounded-box outline, slightly irregular
+  const wallD = wobble(superellipsoid(1.62, 1.2, 1.2, 4.6), 0.018, 9);
+  const wallIn = scaled(wallD, 0.93);
+  const mem = scaled(wallD, 0.925);
   const memIn = scaled(mem, 0.982);
-  const vac = wobble(superellipsoid(1.08, 0.62, 0.66, 3), 0.04, 5);
-  meshes.push({ id: 'parede-celular', structure: 'parede-celular', geometry: wall(wallD, 0.94, CUT, [96, 56]) });
-  meshes.push({ id: 'membrana-plasmatica', structure: 'membrana-plasmatica', geometry: wall(mem, 0.982, CUT, [96, 56]) });
-  meshes.push({ id: 'citoplasma', structure: 'citoplasma', geometry: cutFaces(memIn, vac, CUT, 56) });
-  meshes.push({ id: 'vacuolo', structure: 'vacuolo', geometry: merge([shell(vac, CUT, [80, 44]), cutFaces(vac, null, CUT, 44)]) });
+  const vac = wobble(superellipsoid(1.1, 0.64, 0.68, 3), 0.045, 5);
+  // wall: middle lamella (outer, darker) + primary wall (lighter, fibrous) + cut face showing the thickness
+  const wallGeo = merge([paint(shell(wallD, CUT, [110, 64]), '#8DB85F'), paint(shell(wallIn, CUT, [110, 64]), '#C8E3A2'), paint(cutFaces(wallD, wallIn, CUT, 64), '#A9CF7A')]);
+  meshes.push({ id: 'parede-celular', structure: 'parede-celular', geometry: wallGeo });
+  // plasmodesmata: fine channels crossing the wall, connecting to the neighbouring cells
+  const pd: THREE.BufferGeometry[] = [];
+  for (let i = 0; i < 160 && pd.length < 60; i++) {
+    const d = r.dir();
+    const p = d.clone().multiplyScalar(wallD(d) * 0.962);
+    if (inWedge(p, CUT)) continue;
+    const g = new THREE.CylinderGeometry(0.012, 0.012, wallD(d) * 0.085, 6);
+    pd.push(place(g, p, alignY(d)));
+  }
+  meshes.push({ id: 'plasmodesmos', structure: 'plasmodesmos', geometry: merge(pd) });
+  meshes.push({ id: 'membrana-plasmatica', structure: 'membrana-plasmatica', geometry: merge([paint(shell(mem, CUT, [110, 64]), '#E2A98E'), paint(shell(memIn, CUT, [110, 64]), '#F4D3C1'), paint(cutFaces(mem, memIn, CUT, 64), '#CF8C70')]) });
+  meshes.push({ id: 'citoplasma', structure: 'citoplasma', geometry: cutFaces(memIn, vac, CUT, 64) });
+  // central vacuole: tonoplast (its membrane) + translucent cell sap
+  meshes.push({ id: 'tonoplasto', structure: 'tonoplasto', geometry: shell(vac, CUT, [90, 50]) });
+  meshes.push({ id: 'vacuolo', structure: 'vacuolo', geometry: merge([shell(scaled(vac, 0.985), CUT, [80, 44]), cutFaces(scaled(vac, 0.985), null, CUT, 44)]) });
   anchors.vacuole = [new THREE.Vector3()];
 
   // nucleus pushed to the side by the vacuole (inside the cut-away, top)
   const nC = new THREE.Vector3(Math.sin(VIEW_PHI) * 0.62, 0.8, Math.cos(VIEW_PHI) * 0.62);
-  const NR = 0.22;
+  const NR = 0.24;
   const nd = nucleus(r, nC, NR, meshes, anchors);
   const space = new Space();
   space.take(nC, NR * 1.7);
@@ -328,6 +437,12 @@ function plantCell(): BuiltModel {
   const rer = roughER(r, nd, nC, VIEW_PHI + 1.1, VIEW_PHI + 3.7, 3, ribos, (p) => inCyto(p, 0.95));
   meshes.push({ id: 'reticulo-endoplasmatico-rugoso', structure: 'reticulo-endoplasmatico-rugoso', geometry: rer.geometry });
   anchors.rer = [rer.anchor];
+  const serSeeds: THREE.Vector3[] = [];
+  for (let i = 0; i < 6; i++) {
+    const a = VIEW_PHI + r.range(2.4, 4.2);
+    serSeeds.push(new THREE.Vector3(Math.sin(a) * 1.25, r.range(-0.9, -0.2), Math.cos(a) * 0.95));
+  }
+  meshes.push({ id: 'reticulo-endoplasmatico-liso', structure: 'reticulo-endoplasmatico-liso', geometry: smoothER(r, serSeeds, (p) => inCyto(p, 0.9) && !inWedge(p, CUT), 10, 0.06, 0.014) });
 
   const gAt = new THREE.Vector3(Math.sin(VIEW_PHI + 0.55) * 1.2, 0.72, Math.cos(VIEW_PHI + 0.55) * 1.2);
   const go = golgi(r, gAt, nC, 0.17);
@@ -335,23 +450,41 @@ function plantCell(): BuiltModel {
   meshes.push({ id: 'complexo-golgiense', structure: 'complexo-golgiense', geometry: go.geometry });
   meshes.push({ id: 'vesiculas', structure: 'vesiculas', geometry: dots(go.vesicles.filter((v) => inside(mem, v, 0.97)), 0.02, 2) });
 
-  const box = 1.55;
-  const chloro = slicedOrganelles(r, 16, 'cloroplasto', 'cloroplastos', [0.1, 0.085], ['#4FA34A', '#7DC36B', '#2E6E2E'], 'grana', (p) => inCyto(p, 0.93), space, box, meshes);
+  const box = 1.58;
+  const chloro = slicedOrganelles(r, 18, 'cloroplasto', 'cloroplastos', [0.1, 0.085], ['#3E9440', '#74C266', '#1F6B2A'], 'grana', (p) => inCyto(p, 0.93), space, box, meshes);
   anchors.chloroplasts = chloro;
-  anchors.mitochondria = slicedOrganelles(r, 6, 'mitocondria', 'mitocondria', [0.08, 0.06], ['#DE6538', '#F08D5E', '#F8C8A0'], 'cristae', (p) => inCyto(p, 0.93), space, box, meshes);
+  anchors.mitochondria = mitochondria(r, 7, [0.08, 0.06], (p) => inCyto(p, 0.93), space, box, meshes);
   for (let i = 0; i < 3; i++) {
     const rad = 0.04;
     const p = spot(r, box, (q) => inCyto(q, 0.92), space, rad + 0.02);
     if (p) meshes.push({ id: `peroxissomo-${i + 1}`, structure: 'peroxissomos', geometry: place(blob(rad, i + 4), p) });
   }
-  for (let i = 0; i < 700 && ribos.length < 260; i++) {
-    const p = new THREE.Vector3(r.range(-1.5, 1.5), r.range(-1.1, 1.1), r.range(-1.1, 1.1));
+  // amyloplasts: starch-storing plastids (white, lens-shaped)
+  for (let i = 0; i < 3; i++) {
+    const p = spot(r, box, (q) => inCyto(q, 0.9), space, 0.09);
+    if (p) meshes.push({ id: `amiloplasto-${i + 1}`, structure: 'amiloplastos', geometry: place(new THREE.IcosahedronGeometry(1, 3), p, randomQuat(r), new THREE.Vector3(0.08, 0.055, 0.065)) });
+  }
+  // cortical microtubules: parallel hoops just under the membrane that guide cellulose deposition
+  meshes.push({ id: 'citoesqueleto', structure: 'citoesqueleto', geometry: paint(corticalFilaments(r, mem, 0.965, 90, 0.7, 0.005, CUT), '#A7DED4') });
+  // transvacuolar strands: thin threads of cytoplasm crossing the vacuole
+  const strands: THREE.BufferGeometry[] = [];
+  for (let i = 0; i < 3; i++) {
+    const a = r.dir();
+    const b = a.clone().negate().add(r.dir().multiplyScalar(0.5)).normalize();
+    const pa = a.multiplyScalar(vac(a) * 0.99);
+    const pb = b.multiplyScalar(vac(b) * 0.99);
+    const mid = pa.clone().lerp(pb, 0.5).add(r.dir().multiplyScalar(0.15));
+    strands.push(tube([pa, mid, pb], 0.014, false, 24, 6));
+  }
+  meshes.push({ id: 'filamentos-citoplasmaticos', structure: 'citoplasma', geometry: merge(strands) });
+  for (let i = 0; i < 800 && ribos.length < 300; i++) {
+    const p = new THREE.Vector3(r.range(-1.55, 1.55), r.range(-1.15, 1.15), r.range(-1.15, 1.15));
     if (inCyto(p, 0.95) && space.free(p, 0.01)) ribos.push(p);
   }
   meshes.push({ id: 'ribossomos', structure: 'ribossomos', geometry: dots(ribos, 0.012) });
   anchors.membrane = membranePoints(r, mem, 0.98, 24);
   anchors.wall = membranePoints(r, wallD, 1.0, 24);
-  return { meshes, anchors, preset: presetFor(6.4) };
+  return { meshes, anchors, preset: presetFor(6.5) };
 }
 
 // ===================================================================== prokaryote
@@ -360,64 +493,99 @@ function plantCell(): BuiltModel {
 const LAY = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI / 2);
 const PRO_CUT: Cut = { center: Math.PI / 4, width: Math.PI / 2 };
 
+/** Gram-negative bacillus (like Escherichia coli): capsule, outer membrane, thin wall, periplasm, inner membrane. */
 function prokaryote(): BuiltModel {
   const r = rng(37);
   const meshes: MeshDef[] = [];
   const anchors: BuiltModel['anchors'] = {};
-  const cap = capsuleY(0.95, 0.44);
-  meshes.push({ id: 'capsula-bacteriana', structure: 'capsula-bacteriana', geometry: shell(scaled(cap, 1.17), PRO_CUT, [80, 64]) });
-  meshes.push({ id: 'parede-celular-bacteriana', structure: 'parede-celular-bacteriana', geometry: wall(scaled(cap, 1.075), 0.955, PRO_CUT, [80, 64]) });
-  meshes.push({ id: 'membrana-plasmatica', structure: 'membrana-plasmatica', geometry: wall(scaled(cap, 1.022), 0.975, PRO_CUT, [80, 64]) });
-  const cyt = scaled(cap, 0.996);
-  meshes.push({ id: 'citoplasma', structure: 'citoplasma', geometry: cutFaces(cyt, null, PRO_CUT, 64) });
+  const cap = wobble(capsuleY(0.95, 0.44), 0.012, 4);
+  meshes.push({ id: 'capsula-bacteriana', structure: 'capsula-bacteriana', geometry: shell(scaled(cap, 1.2), PRO_CUT, [90, 72]) });
+  // outer membrane, studded with lipopolysaccharide (fuzzy outer face)
+  const outer = scaled(cap, 1.085);
+  meshes.push({
+    id: 'membrana-externa',
+    structure: 'membrana-externa',
+    geometry: merge([paint(wall(outer, 0.975, PRO_CUT, [90, 72]), '#8CB7A1'), paint(bumps(r, outer, 700, [0.012, 0.022], 0.006, PRO_CUT), '#B9DCC8')]),
+  });
+  meshes.push({ id: 'periplasma', structure: 'periplasma', geometry: cutFaces(scaled(cap, 1.058), scaled(cap, 1.03), PRO_CUT, 72) });
+  meshes.push({ id: 'parede-celular-bacteriana', structure: 'parede-celular-bacteriana', geometry: wall(scaled(cap, 1.045), 0.985, PRO_CUT, [90, 72]) });
+  const pm = scaled(cap, 1.022);
+  const pmIn = scaled(pm, 0.978);
+  meshes.push({ id: 'membrana-plasmatica', structure: 'membrana-plasmatica', geometry: merge([paint(shell(pm, PRO_CUT, [90, 72]), '#E2A98E'), paint(shell(pmIn, PRO_CUT, [90, 72]), '#F4D3C1'), paint(cutFaces(pm, pmIn, PRO_CUT, 72), '#CF8C70')]) });
+  const cyt = scaled(cap, 0.998);
+  meshes.push({ id: 'citoplasma', structure: 'citoplasma', geometry: cutFaces(cyt, null, PRO_CUT, 72) });
 
-  const nucl = ellipsoid(0.24, 0.62, 0.24);
-  const strand = tangle(r, new THREE.Vector3(0, -0.4, 0), 220, 0.045, (p) => inside(nucl, p));
-  meshes.push({ id: 'nucleoide', structure: 'nucleoide', geometry: tube(strand, 0.011, false, 1400, 5) });
+  // nucleoid: one circular chromosome, supercoiled into a dense irregular mass
+  const nucl = wobble(ellipsoid(0.25, 0.64, 0.25), 0.1, 2);
+  const strand = tangle(r, new THREE.Vector3(0, -0.4, 0), 320, 0.04, (p) => inside(nucl, p));
+  meshes.push({ id: 'nucleoide', structure: 'nucleoide', geometry: tube(strand, 0.0105, false, 2000, 5) });
   anchors.nucleoid = [new THREE.Vector3()];
 
   const space = new Space();
   space.take(new THREE.Vector3(0, 0, 0), 0.3);
   const plasmids: THREE.BufferGeometry[] = [];
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 4; i++) {
     const p = spot(r, 1.2, (q) => inside(cyt, q, 0.78) && !inside(nucl, q, 1.15), space, 0.1);
-    if (p) plasmids.push(place(tube(loop(r.range(0.06, 0.085), r), 0.011, true, 60, 5), p, new THREE.Quaternion().setFromEuler(new THREE.Euler(r.range(0, 3), r.range(0, 3), 0))));
+    if (p) plasmids.push(place(tube(loop(r.range(0.06, 0.085), r), 0.011, true, 60, 5), p, randomQuat(r)));
   }
   meshes.push({ id: 'plasmideos', structure: 'plasmideos', geometry: merge(plasmids) });
+  // storage granules (glycogen / polyphosphate inclusions)
+  for (let i = 0; i < 5; i++) {
+    const p = spot(r, 1.2, (q) => inside(cyt, q, 0.75) && !inside(nucl, q, 1.2), space, 0.07);
+    if (p) meshes.push({ id: `inclusao-${i + 1}`, structure: 'inclusoes', geometry: place(blob(r.range(0.04, 0.06), i + 12), p) });
+  }
 
   const ribos: THREE.Vector3[] = [];
-  for (let i = 0; i < 1200 && ribos.length < 300; i++) {
+  for (let i = 0; i < 2000 && ribos.length < 420; i++) {
     const p = new THREE.Vector3(r.range(-0.5, 0.5), r.range(-1.4, 1.4), r.range(-0.5, 0.5));
-    if (inside(cyt, p, 0.93) && space.free(p, 0.015) && !inside(nucl, p, 0.8)) ribos.push(p);
+    if (inside(cyt, p, 0.93) && space.free(p, 0.015) && !inside(nucl, p, 0.75)) ribos.push(p);
   }
   meshes.push({ id: 'ribossomos-70s', structure: 'ribossomos-70s', geometry: dots(ribos, 0.016) });
 
-  // flagellum: helical filament from the lower pole, with a hook
-  const base = new THREE.Vector3(0, -(0.95 + 0.44 * 1.07), 0);
-  const pts: THREE.Vector3[] = [base.clone().add(new THREE.Vector3(0, 0.05, 0))];
-  for (let i = 0; i <= 120; i++) {
-    const t = i / 120;
-    const amp = 0.13 * Math.min(1, t * 6);
-    const a = t * Math.PI * 2 * 4.2;
-    pts.push(new THREE.Vector3(Math.cos(a) * amp, base.y - 0.06 - t * 2.4, Math.sin(a) * amp));
-  }
-  meshes.push({ id: 'flagelo-bacteriano', structure: 'flagelo-bacteriano', geometry: tube(pts, 0.02, false, 600, 6) });
-  anchors.flagellumAxis = [base.clone(), base.clone().add(new THREE.Vector3(0, -1, 0))];
+  // flagella: several helical filaments (peritrichous), each with a hook and a basal body in the envelope
+  const flagella: THREE.Vector3[] = [];
+  const bases: { p: THREE.Vector3; d: THREE.Vector3 }[] = [
+    { p: new THREE.Vector3(0, -(0.95 + 0.44 * 1.07), 0), d: new THREE.Vector3(0, -1, 0) },
+    { p: new THREE.Vector3(0.3, -0.98, -0.32), d: new THREE.Vector3(0.55, -0.6, -0.58) },
+    { p: new THREE.Vector3(-0.38, -0.55, -0.26), d: new THREE.Vector3(-0.7, -0.45, -0.55) },
+    { p: new THREE.Vector3(0.34, 0.45, -0.3), d: new THREE.Vector3(0.6, 0.35, -0.72) },
+  ];
+  bases.forEach((b, k) => {
+    const d = b.d.clone().normalize();
+    const base = d.clone().multiplyScalar(cap(d) * 1.09);
+    if (inWedge(base, PRO_CUT)) return;
+    const q = alignY(d.clone().negate());
+    const pts: THREE.Vector3[] = [];
+    const len = r.range(1.6, 2.1);
+    for (let i = 0; i <= 120; i++) {
+      const t = i / 120;
+      const amp = 0.1 * Math.min(1, t * 6);
+      const a = t * Math.PI * 2 * 3.6 + k;
+      pts.push(new THREE.Vector3(Math.cos(a) * amp, -0.06 - t * len, Math.sin(a) * amp).applyQuaternion(q).add(base));
+    }
+    const filament = tube(pts, 0.011, false, 600, 6);
+    // basal body: two rings in the envelope + a short hook
+    const rings = merge([place(new THREE.TorusGeometry(0.05, 0.012, 8, 20), base.clone().addScaledVector(d, -0.06), q), place(new THREE.TorusGeometry(0.04, 0.01, 8, 20), base.clone().addScaledVector(d, -0.11), q)]);
+    meshes.push({ id: `flagelo-${k + 1}`, structure: 'flagelo-bacteriano', geometry: merge([paint(filament, '#8C7A57'), paint(rings, '#5C4D33')]) });
+    flagella.push(base.clone(), base.clone().add(d));
+  });
+  anchors.flagellumAxis = [flagella[0], flagella[1]];
+  anchors.flagella = flagella;
 
   const fim: THREE.BufferGeometry[] = [];
-  for (let i = 0; i < 110; i++) {
+  for (let i = 0; i < 220; i++) {
     const d = r.dir();
-    const p = d.clone().multiplyScalar(cap(d) * 1.07);
+    const p = d.clone().multiplyScalar(cap(d) * 1.085);
     if (inWedge(p, PRO_CUT) || Math.abs(p.y) > 1.3) continue;
-    const len = r.range(0.14, 0.24);
-    const c = new THREE.CylinderGeometry(0.0055, 0.0055, len, 4);
-    fim.push(place(c, p.clone().addScaledVector(d, len / 2), new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), d)));
+    const len = r.range(0.1, 0.22);
+    const c = new THREE.CylinderGeometry(0.005, 0.004, len, 4);
+    fim.push(place(c, p.clone().addScaledVector(d, len / 2), alignY(d)));
   }
   meshes.push({ id: 'fimbrias', structure: 'fimbrias', geometry: merge(fim) });
 
   for (const m of meshes) m.geometry.applyQuaternion(LAY);
   for (const k of Object.keys(anchors)) anchors[k] = anchors[k].map((p) => p.clone().applyQuaternion(LAY));
-  return { meshes, anchors, preset: presetFor(6.6, [-0.35, 0, 0], 0.5, 0.25) };
+  return { meshes, anchors, preset: presetFor(7.4, [-0.2, -0.1, 0], 0.5, 0.25) };
 }
 
 // ===================================================================== mitochondrion (detail)
@@ -557,7 +725,7 @@ function chloroplastDetail(): BuiltModel {
   return { meshes, anchors, preset: presetFor(6.4, [0, 0, 0], 0.62, 0.15) };
 }
 
-const BUILDERS: Record<Exclude<CellModelId, 'mitose'>, () => BuiltModel> = {
+const BUILDERS: Record<Exclude<CellModelId, 'mitose' | 'meiose'>, () => BuiltModel> = {
   animal: animalCell,
   vegetal: plantCell,
   procariotica: prokaryote,
@@ -565,6 +733,6 @@ const BUILDERS: Record<Exclude<CellModelId, 'mitose'>, () => BuiltModel> = {
   cloroplasto: chloroplastDetail,
 };
 
-export function buildCellModel(id: Exclude<CellModelId, 'mitose'>): BuiltModel {
+export function buildCellModel(id: Exclude<CellModelId, 'mitose' | 'meiose'>): BuiltModel {
   return BUILDERS[id]();
 }
