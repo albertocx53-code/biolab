@@ -111,6 +111,7 @@ outgoingLight += uOrgRimColor * orgFres * uOrgRim;
 export class MaterialLibrary {
   private base = new Map<string, THREE.MeshStandardMaterial>();
   private opacity = new Map<string, number>();
+  private clipping = new Map<string, THREE.Plane[] | null>();
   private highlights = new WeakMap<THREE.Material, THREE.MeshStandardMaterial>();
   private hovers = new WeakMap<THREE.Material, THREE.MeshStandardMaterial>();
   readonly highlight: THREE.MeshStandardMaterial;
@@ -159,6 +160,8 @@ export class MaterialLibrary {
       m.userData.group = group;
       this.base.set(key, m);
       this.applyOpacity(m, this.opacity.get(group) ?? 1);
+      const planes = this.clipping.get(group);
+      if (planes) this.applyClipping(m, planes);
     }
     return m;
   }
@@ -185,6 +188,7 @@ export class MaterialLibrary {
       h.onBeforeCompile = (base as THREE.MeshStandardMaterial).onBeforeCompile;
       h.customProgramCacheKey = (base as THREE.MeshStandardMaterial).customProgramCacheKey;
       h.userData.biolabHighlight = true;
+      h.clippingPlanes = (base as THREE.MeshStandardMaterial).clippingPlanes;
       this.highlights.set(base, h);
     }
     return h;
@@ -199,6 +203,8 @@ export class MaterialLibrary {
       h.onBeforeCompile = (base as THREE.MeshStandardMaterial).onBeforeCompile;
       h.customProgramCacheKey = (base as THREE.MeshStandardMaterial).customProgramCacheKey;
       h.userData.biolabHover = true;
+      h.clippingPlanes = (base as THREE.MeshStandardMaterial).clippingPlanes;
+      h.side = (base as THREE.MeshStandardMaterial).side;
       this.hovers.set(base, h);
     }
     const b = base as THREE.MeshStandardMaterial;
@@ -213,6 +219,31 @@ export class MaterialLibrary {
 
   isHighlight(m: THREE.Material) {
     return m === this.highlight || (m as THREE.MeshStandardMaterial).userData?.biolabHighlight === true;
+  }
+
+  /**
+   * Cut-away for one group: every material of the group (and its selection
+   * clones) is clipped by the planes; faces are drawn on both sides so the
+   * inside of hollow organs stays visible. `null` removes the cut.
+   */
+  setGroupClipping(group: string, planes: THREE.Plane[] | null) {
+    this.clipping.set(group, planes);
+    for (const m of this.base.values()) if (m.userData.group === group) this.applyClipping(m, planes);
+  }
+
+  private applyClipping(m: THREE.MeshStandardMaterial, planes: THREE.Plane[] | null) {
+    const targets = [m, this.highlights.get(m), this.hovers.get(m)].filter(Boolean) as THREE.MeshStandardMaterial[];
+    for (const t of targets) {
+      t.clippingPlanes = planes;
+      if (planes) {
+        t.userData.sideBeforeClip ??= t.side;
+        t.side = THREE.DoubleSide;
+      } else if (t.userData.sideBeforeClip !== undefined) {
+        t.side = t.userData.sideBeforeClip;
+        delete t.userData.sideBeforeClip;
+      }
+      t.needsUpdate = true;
+    }
   }
 
   setGroupOpacity(group: string, opacity: number) {

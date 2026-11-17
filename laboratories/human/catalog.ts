@@ -65,6 +65,43 @@ export interface HumanIndex {
 
 export const baseId = (id: string) => id.replace(/-(dir|esq)(-\d+)?$/, '');
 
+/**
+ * Teaching composites added on top of the generated catalog: whole vessels
+ * and valves that the source data only has in pieces. Members that are not
+ * in the catalog are ignored, so the list is safe across model versions.
+ */
+export const EXTRA_COMPOSITES: RawHumanCatalog['composites'] = [
+  { id: 'aorta', n: 'Aorta', la: 'Aorta', g: 'vasos', members: ['ascending-aorta', 'aortic-arch', 'thoracic-aorta', 'abdominal-aorta'] },
+  { id: 'veias-cavas', n: 'Veias cavas', la: 'Venae cavae', g: 'vasos', members: ['superior-vena-cava', 'inferior-vena-cava-thoracic-part', 'inferior-vena-cava-abdominal-part'] },
+  { id: 'arterias-pulmonares', n: 'Tronco e artérias pulmonares', la: 'Truncus pulmonalis; arteriae pulmonales', g: 'vasos', members: ['pulmonary-trunk', 'bifurcation-of-pulmonary-trunk', 'left-pulmonary-artery', 'right-pulmonary-artery'] },
+  { id: 'veias-pulmonares', n: 'Veias pulmonares', la: 'Venae pulmonales', g: 'vasos', members: ['right-superior-pulmonary-vein', 'right-inferior-pulmonary-vein', 'left-superior-pulmonary-vein', 'left-inferior-pulmonary-vein'] },
+  { id: 'arterias-coronarias', n: 'Artérias coronárias', la: 'Arteriae coronariae', g: 'vasos', members: ['right-coronary-artery', 'left-coronary-artery', 'right-inferolateral-branch-of-right-coronary-artery'] },
+  {
+    id: 'grandes-vasos',
+    n: 'Grandes vasos do coração',
+    la: null,
+    g: 'vasos',
+    members: [
+      'ascending-aorta',
+      'aortic-arch',
+      'superior-vena-cava',
+      'inferior-vena-cava-thoracic-part',
+      'pulmonary-trunk',
+      'bifurcation-of-pulmonary-trunk',
+      'left-pulmonary-artery',
+      'right-pulmonary-artery',
+      'right-superior-pulmonary-vein',
+      'right-inferior-pulmonary-vein',
+      'left-superior-pulmonary-vein',
+      'left-inferior-pulmonary-vein',
+    ],
+  },
+  { id: 'valva-tricuspide', n: 'Valva tricúspide (atrioventricular direita)', la: 'Valva atrioventricularis dextra', g: 'coracao', members: ['inferior-leaflet-of-right-atrioventricular-valve', 'septal-leaflet-of-right-atrioventricular-valve'] },
+  { id: 'valva-mitral', n: 'Valva mitral (atrioventricular esquerda)', la: 'Valva atrioventricularis sinistra', g: 'coracao', members: ['posterior-leaflet-of-left-atrioventricular-valve'] },
+  { id: 'valva-aortica', n: 'Valva aórtica', la: 'Valva aortae', g: 'coracao', members: ['left-coronary-leaflet', 'non-coronary-leaflet', 'right-coronary-leaflet'] },
+  { id: 'valva-pulmonar', n: 'Valva pulmonar', la: 'Valva trunci pulmonalis', g: 'coracao', members: ['anterior-semilunar-leaflet-of-pulmonary-valve', 'left-semilunar-leaflet-of-pulmonary-valve', 'right-semilunar-leaflet-of-pulmonary-valve'] },
+];
+
 function contentFor(id: string): HumanContent | undefined {
   return HUMAN_CONTENT[id] ?? HUMAN_CONTENT[baseId(id)];
 }
@@ -79,7 +116,11 @@ export function normalize(s: string) {
     .trim();
 }
 
-export function buildHumanIndex(raw: RawHumanCatalog): HumanIndex {
+export function buildHumanIndex(input: RawHumanCatalog): HumanIndex {
+  const known = new Set(input.meshes.map((m) => m.id));
+  const existing = new Set(input.composites.map((c) => c.id));
+  const extra = EXTRA_COMPOSITES.map((c) => ({ ...c, members: c.members.filter((m) => known.has(m)) })).filter((c) => c.members.length && !existing.has(c.id));
+  const raw: RawHumanCatalog = { ...input, composites: [...input.composites, ...extra] };
   const structures = new Map<string, Structure>();
   const meshInfo = new Map<string, CatalogMesh>();
   const members = new Map<string, string[]>();

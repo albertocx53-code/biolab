@@ -64,6 +64,7 @@ export function LabCanvas({ children, cameraPreset, onPointerMissed, onContextLo
       }}
       onCreated={({ gl }) => {
         gl.toneMapping = THREE.ACESFilmicToneMapping;
+        gl.localClippingEnabled = true; // per-material cut-aways (e.g. the heart)
         gl.toneMappingExposure = 1.0;
         gl.setClearColor(0x000000, 0); // transparent: the CSS studio backdrop shows through
         const canvas = gl.domElement;

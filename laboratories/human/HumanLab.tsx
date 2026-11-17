@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type * as THREE from 'three';
+import * as THREE from 'three';
 import { LabCanvas } from '@/components/3d/LabCanvas';
 import { GltfModel } from '@/components/3d/GltfModel';
 import { ModelSlot } from '@/components/3d/ModelSlot';
@@ -25,8 +25,13 @@ import { meshRegistry } from '@/engine/selection/registry';
 import { MaterialLibrary } from '@/engine/visibility/materials';
 import { isWebGLAvailable, loadSavedQuality, pickDefaultQuality, readDeviceSignals } from '@/engine/performance/quality';
 import { HUMAN_CONTENT } from '@/data/biology/human/content';
+import { ProcessDriver } from '@/laboratories/shared/ProcessDriver';
+import { ProcessPlayer } from '@/laboratories/shared/ProcessPlayer';
+import { useProcess } from '@/laboratories/shared/process';
 import { baseId, buildHumanIndex, SYSTEM_NOTE, type HumanIndex, type RawHumanCatalog, type Region } from './catalog';
+import { CirculationLayer, heartCentre } from './CirculationLayer';
 import { HUMAN_FALLBACK, HUMAN_MATERIALS } from './materials';
+import { HUMAN_PROCESSES } from './processes';
 
 const CATALOG_URL = '/models/human/v1/catalog.json';
 
@@ -62,6 +67,8 @@ export function HumanLab({ canUseStudio, tierLabel }: { canUseStudio: boolean; t
   const [layersOpen, setLayersOpen] = useState(false);
   const [depth, setDepth] = useState(DEFAULT_DEPTH);
   const [dark, setDark] = useState(false);
+  const [heartCut, setHeartCut] = useState(false);
+  const processId = useProcess((p) => p.id);
   const rootRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<SearchBoxHandle>(null);
   const fs = useFullscreen(rootRef);
@@ -91,7 +98,8 @@ export function HumanLab({ canUseStudio, tierLabel }: { canUseStudio: boolean; t
       .then((raw) => {
         if (cancelled) return;
         const idx = buildHumanIndex(raw);
-        useViewer.getState().init(raw.groups.map((g) => ({ id: g.id, visible: g.defaultVisible, opacity: g.defaultOpacity })));
+        // blood vessels are part of what a teacher expects to see when the muscles are peeled away
+        useViewer.getState().init(raw.groups.map((g) => ({ id: g.id, visible: g.id === 'vasos' ? true : g.defaultVisible, opacity: g.defaultOpacity })));
         applyDepth(DEFAULT_DEPTH);
         setIndex(idx);
         performance.mark?.('biolab:catalog-ready');
@@ -101,8 +109,22 @@ export function HumanLab({ canUseStudio, tierLabel }: { canUseStudio: boolean; t
     return () => {
       cancelled = true;
       useViewer.getState().setPresentation(false);
+      useProcess.getState().stop();
     };
   }, []);
+
+  // ---- heart cut-away: a frontal clipping plane through the heart (coronal section)
+  useEffect(() => {
+    if (!index) return;
+    if (!heartCut) {
+      library.setGroupClipping('coracao', null);
+      return;
+    }
+    const c = heartCentre(index);
+    library.setGroupClipping('coracao', [new THREE.Plane(new THREE.Vector3(0, 0, -1), c.z + 0.004)]);
+    useViewer.setState({}); // notify SceneSync so the canvas repaints
+    return () => library.setGroupClipping('coracao', null);
+  }, [heartCut, index, library]);
 
   // ---- lazy model loading: a model is requested the first time one of its groups becomes visible
   useEffect(() => {
@@ -137,12 +159,18 @@ export function HumanLab({ canUseStudio, tierLabel }: { canUseStudio: boolean; t
       const meshes = index.meshesOf(id);
       // peel the outer layers so the chosen structure is actually exposed (atlas behaviour)
       const groups = new Set(meshes.map((m) => index.meshInfo.get(m)?.group));
-      const need = groups.has('tegumentar') ? 0 : groups.has('muscular') || groups.has('fascias') ? 1 : groups.has('esqueletico') ? 2 : 2.5;
+      // organs: bones fade to a faint cage; heart and vessels sit deep in the thorax, so fade them further
+      const need = groups.has('tegumentar') ? 0 : groups.has('muscular') || groups.has('fascias') ? 1 : groups.has('esqueletico') ? 2 : groups.has('coracao') || groups.has('vasos') ? 2.8 : 2.5;
       const st0 = useViewer.getState();
       const outerCovers = (st0.groupVisible.tegumentar && (st0.groupOpacity.tegumentar ?? 1) > 0.5 && need > 0) || (st0.groupVisible.muscular && (st0.groupOpacity.muscular ?? 1) > 0.5 && need > 1);
       if (outerCovers) {
         setDepth(need);
         applyDepth(need);
+      }
+      if (groups.has('coracao') || (groups.has('vasos') && meshes.length < 40)) {
+        // the heart and its vessels sit behind the lungs: make the lungs and the rib cage see-through
+        if ((st0.groupOpacity.respiratorio ?? 1) > 0.5) st0.setGroupOpacity('respiratorio', 0.12);
+        if ((st0.groupOpacity.esqueletico ?? 1) > 0.3) st0.setGroupOpacity('esqueletico', 0.2);
       }
       ensureVisible(meshes);
       useViewer.getState().select(id);
@@ -152,6 +180,45 @@ export function HumanLab({ canUseStudio, tierLabel }: { canUseStudio: boolean; t
       }
     },
     [index, ensureVisible],
+  );
+
+  /** Classroom view of the heart and vessels: peel skin and muscles, keep a faint skeleton and the lungs for context. */
+  const showCirculation = useCallback(
+    (focus = true) => {
+      if (!index) return;
+      const st = useViewer.getState();
+      setRegion(null);
+      st.isolate(null);
+      setDepth(3);
+      applyDepth(3);
+      st.setGroupVisible('esqueletico', true);
+      st.setGroupOpacity('esqueletico', 0.14);
+      for (const g of ['coracao', 'vasos']) {
+        st.setGroupVisible(g, true);
+        st.setGroupOpacity(g, 1);
+      }
+      st.setGroupVisible('respiratorio', true);
+      st.setGroupOpacity('respiratorio', 0.12);
+      for (const g of ['digestorio', 'urinario', 'reprodutor', 'endocrino', 'linfatico', 'nervoso', 'fascias']) st.setGroupVisible(g, false);
+      if (focus) {
+        const meshes = [...index.meshesOf('coracao'), ...index.meshesOf('arterias-pulmonares')];
+        setTimeout(() => useViewer.getState().command({ type: 'focus', meshIds: meshes }), 80);
+      }
+    },
+    [index],
+  );
+
+  const startProcess = useCallback(
+    (pid: string) => {
+      const p = useProcess.getState();
+      if (p.id === pid) {
+        p.stop();
+        return;
+      }
+      showCirculation(true);
+      p.start(pid);
+    },
+    [showCirculation],
   );
 
   const openRegion = useCallback(
@@ -287,6 +354,13 @@ export function HumanLab({ canUseStudio, tierLabel }: { canUseStudio: boolean; t
         case 'L':
           st.setLabels(!st.labels);
           break;
+        case ' ': {
+          const p = useProcess.getState();
+          if (!p.id) return;
+          e.preventDefault();
+          p.setPlaying(!p.playing);
+          break;
+        }
         case '+':
         case '=':
           st.command({ type: 'zoom', factor: 1.25 });
@@ -362,6 +436,8 @@ export function HumanLab({ canUseStudio, tierLabel }: { canUseStudio: boolean; t
               );
             })}
             <SceneSync library={library} meshesOf={meshesOf} />
+            <ProcessDriver processes={HUMAN_PROCESSES} />
+            <CirculationLayer index={index} />
             {s.labels && selected && <SelectionLabel text={selected.namePtBR} meshIds={selected.modelMeshIds} />}
           </LabCanvas>
         )}
@@ -445,6 +521,34 @@ export function HumanLab({ canUseStudio, tierLabel }: { canUseStudio: boolean; t
             <p className="eyebrow mb-3">Profundidade</p>
             <DepthSlider value={depth} onChange={setDepth} large={pres} />
           </div>
+          <div className="border-b border-line p-3" data-testid="circulation-tools">
+            <p className="eyebrow mb-2 px-1">Coração e circulação</p>
+            <div className="flex flex-wrap gap-1.5">
+              <button type="button" className="btn btn-ghost h-8 px-2.5 text-[12.5px]" onClick={() => showCirculation(true)} data-testid="view-circulation">
+                <Icon name="focus" size={14} /> Ver coração e vasos
+              </button>
+              <button type="button" className={`btn h-8 px-2.5 text-[12.5px] ${heartCut ? 'btn-primary' : 'btn-ghost'}`} aria-pressed={heartCut} onClick={() => { if (!heartCut) showCirculation(true); setHeartCut((v) => !v); }} data-testid="heart-cut">
+                <Icon name="layers" size={14} /> {heartCut ? 'Fechar o coração' : 'Corte do coração'}
+              </button>
+            </div>
+            <ul className="mt-2 space-y-1">
+              {Object.values(HUMAN_PROCESSES).map((proc) => {
+                const active = processId === proc.id;
+                return (
+                  <li key={proc.id}>
+                    <button
+                      type="button"
+                      className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[12.5px] leading-snug ${active ? 'bg-cyan-soft font-semibold text-cyan' : 'hover:bg-ink-800'}`}
+                      onClick={() => startProcess(proc.id)}
+                      aria-pressed={active}
+                    >
+                      <Icon name={active ? 'pause' : 'play'} size={14} className="shrink-0" /> {proc.title}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
           {!pres && (
             <div className="scroll-thin min-h-0 flex-1 overflow-y-auto p-2">
               <p className="eyebrow px-1.5 pt-1 pb-2">Sistemas</p>
@@ -471,6 +575,7 @@ export function HumanLab({ canUseStudio, tierLabel }: { canUseStudio: boolean; t
           Arraste para girar · role para aproximar · clique em uma estrutura
         </p>
       )}
+      {!hideUi && processId && <ProcessPlayer processes={HUMAN_PROCESSES} large={pres} docked={!showRight} />}
       {!hideUi && index && <ViewerToolbar />}
 
       {/* ---------- scientific / region panel (floating, right) */}
