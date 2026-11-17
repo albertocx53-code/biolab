@@ -16,9 +16,9 @@ const R = 0.62;
 const SEG: [number, number] = [64, 40];
 const HIDE = 1e-4;
 /** Centre of each daughter once the cells are apart. */
-const DAUGHTER_Y = 1.02;
+const DAUGHTER_Y = 0.94;
 
-export const FISSION_PRESET: CameraPreset = { position: [0.3, 1.0, 4.9], target: [0, 0, 0], distance: 5.0, minDistance: 0.3, maxDistance: 14 };
+export const FISSION_PRESET: CameraPreset = { position: [0.4, 1.2, 7.2], target: [0, 0, 0], distance: 7.4, minDistance: 0.3, maxDistance: 16 };
 
 export interface FissionModel {
   meshes: MeshDef[];
@@ -36,7 +36,7 @@ export function fissionShape(P: number): DistFn {
 }
 
 /** Shape of one daughter cell (a short rod). */
-export const daughterShape: DistFn = meiosisShape(R, 'y', 1.2, 0);
+export const daughterShape: DistFn = meiosisShape(R, 'y', 0.9, 0);
 
 /** Distance between the centre of each daughter's content and the origin. */
 export function fissionOffset(P: number) {
@@ -78,7 +78,7 @@ export function buildFission(): FissionModel {
     const ribo: THREE.Vector3[] = [];
     for (let i = 0; i < 1200 && ribo.length < 150; i++) {
       const p = new THREE.Vector3(r.range(-0.5, 0.5), r.range(-0.5, 0.5), r.range(-0.5, 0.5));
-      if (inside(daughterShape, p, 0.86) && !inside(nd, p, 1.1)) ribo.push(p);
+      if (inside(daughterShape, p, 0.68) && !inside(nd, p, 1.1)) ribo.push(p);
     }
     meshes.push({ id: `ribossomos-${side}`, structure: 'ribossomos-70s', geometry: paint(dots(ribo, 0.016), '#2A3461') });
   }
@@ -105,9 +105,8 @@ export function poseFission(P: number, get: (id: string) => THREE.Mesh | undefin
   show('plasmideos-a', true, new THREE.Vector3(0, off, 0));
   show('plasmideos-b', grow > 0.02, new THREE.Vector3(0, -off, 0), Math.max(HIDE, grow));
   // ribosomes: start as one cloud at the centre, then travel with each half
-  const riboSpread = 0.25 + off;
-  show('ribossomos-a', true, new THREE.Vector3(0, riboSpread - 0.25, 0));
-  show('ribossomos-b', true, new THREE.Vector3(0, -(riboSpread - 0.25), 0));
+  show('ribossomos-a', true, new THREE.Vector3(0, 0.12 + off * 0.8, 0));
+  show('ribossomos-b', true, new THREE.Vector3(0, -(0.12 + off * 0.8), 0));
   // septum
   const sept = ss(2.4, 3.7, P);
   const m = get('septo');
