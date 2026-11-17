@@ -103,12 +103,14 @@ test.describe('Laboratório de Células', () => {
     let player = page.getByTestId('process-player');
     await expect(player.getByTestId('process-step-title')).toHaveText('Interfase');
     await player.getByRole('button', { name: 'Telófase II' }).click();
+    await page.evaluate(() => { const b = (window as unknown as W).__biolab; b.process.getState().setPlaying(false); b.clock.t = 999; });
     await page.waitForTimeout(800);
     const ys = await page.evaluate(() => ['membrana-a1', 'membrana-a2'].map((id) => (window as unknown as W).__biolab.registry.get(id).scale.x));
     expect(ys.every((v: number) => v > 0.5)).toBe(true);
     await openCells(page, 'fissao');
     player = page.getByTestId('process-player');
     await player.getByRole('button', { name: 'Separação' }).click();
+    await page.evaluate(() => { const b = (window as unknown as W).__biolab; b.process.getState().setPlaying(false); b.clock.t = 999; });
     await page.waitForTimeout(1200);
     const sc = await page.evaluate(() => ['parede-a', 'parede-b'].map((id) => (window as unknown as W).__biolab.registry.get(id).scale.x));
     expect(sc.every((v: number) => v > 0.5)).toBe(true);
