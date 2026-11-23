@@ -111,7 +111,7 @@ outgoingLight += uOrgRimColor * orgFres * uOrgRim;
 export class MaterialLibrary {
   private base = new Map<string, THREE.MeshStandardMaterial>();
   private opacity = new Map<string, number>();
-  private clipping = new Map<string, THREE.Plane[] | null>();
+  private clipping = new Map<string, { planes: THREE.Plane[] | null; intersect: boolean; classes?: string[] }>();
   private highlights = new WeakMap<THREE.Material, THREE.MeshStandardMaterial>();
   private hovers = new WeakMap<THREE.Material, THREE.MeshStandardMaterial>();
   readonly highlight: THREE.MeshStandardMaterial;
@@ -158,10 +158,11 @@ export class MaterialLibrary {
         m.polygonOffsetUnits = -4;
       }
       m.userData.group = group;
+      m.userData.cls = cls;
       this.base.set(key, m);
       this.applyOpacity(m, this.opacity.get(group) ?? 1);
-      const planes = this.clipping.get(group);
-      if (planes) this.applyClipping(m, planes);
+      const clip = this.clipping.get(group);
+      if (clip?.planes && (!clip.classes || clip.classes.includes(cls))) this.applyClipping(m, clip.planes, clip.intersect);
     }
     return m;
   }
@@ -226,15 +227,26 @@ export class MaterialLibrary {
    * clones) is clipped by the planes; faces are drawn on both sides so the
    * inside of hollow organs stays visible. `null` removes the cut.
    */
-  setGroupClipping(group: string, planes: THREE.Plane[] | null) {
-    this.clipping.set(group, planes);
-    for (const m of this.base.values()) if (m.userData.group === group) this.applyClipping(m, planes);
+  /**
+   * Clips every material of a group. With `intersect`, only the region on the
+   * clipped side of *all* planes is removed (a box-shaped cut-away), so the
+   * rest of the group stays whole. `classes` limits the cut to some material
+   * classes of the group (e.g. the kidneys but not the ureters).
+   */
+  setGroupClipping(group: string, planes: THREE.Plane[] | null, intersect = false, classes?: string[]) {
+    this.clipping.set(group, { planes, intersect, classes });
+    for (const m of this.base.values()) {
+      if (m.userData.group !== group) continue;
+      const on = planes && (!classes || classes.includes(m.userData.cls));
+      this.applyClipping(m, on ? planes : null, intersect);
+    }
   }
 
-  private applyClipping(m: THREE.MeshStandardMaterial, planes: THREE.Plane[] | null) {
+  private applyClipping(m: THREE.MeshStandardMaterial, planes: THREE.Plane[] | null, intersect: boolean) {
     const targets = [m, this.highlights.get(m), this.hovers.get(m)].filter(Boolean) as THREE.MeshStandardMaterial[];
     for (const t of targets) {
       t.clippingPlanes = planes;
+      t.clipIntersection = !!planes && intersect;
       if (planes) {
         t.userData.sideBeforeClip ??= t.side;
         t.side = THREE.DoubleSide;

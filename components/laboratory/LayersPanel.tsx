@@ -42,7 +42,7 @@ export function LayersPanel({ groups, models, ariaLabel = 'Sistemas anatômicos'
                 <span className={`truncate text-[13px] leading-tight ${on ? 'font-medium text-fg' : 'text-fg-subtle'}`}>{g.name}</span>
                 {on && st === 'loading' && <span className="h-3 w-3 shrink-0 animate-spin rounded-full border-2 border-cyan border-t-transparent" aria-label="carregando" />}
                 {st === 'error' && <span className="text-[11px] text-danger">erro</span>}
-                {!on && st === 'idle' && m && <span className="ml-auto shrink-0 text-[10px] text-fg-subtle">{(m.bytes / 1e6).toFixed(1)} MB</span>}
+                {!on && st === 'idle' && m && m.bytes > 0 && <span className="ml-auto shrink-0 text-[10px] text-fg-subtle">{(m.bytes / 1e6).toFixed(1)} MB</span>}
               </button>
               {on && (
                 <button

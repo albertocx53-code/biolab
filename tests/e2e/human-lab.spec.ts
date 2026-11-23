@@ -57,6 +57,32 @@ test.describe('Laboratório Corpo Humano', () => {
     await page.getByTestId('process-player').getByRole('button', { name: 'Fechar animação' }).click();
   });
 
+  test('rins, encéfalo e sistema feminino modelados pelo BioLab: cortes, troca de sistema e ficha', async ({ page }) => {
+    const bl = () => page.evaluate(() => { const b = (window as any).__biolab; const s = b.viewer.getState(); return { has: ['cortex-renal-esq', 'lobo-frontal-esq', 'cerebelo', 'utero'].every((id) => b.registry.has(id)), m: s.groupVisible.reprodutor, f: s.groupVisible['reprodutor-feminino'], n: s.groupVisible.nervoso }; });
+    await page.waitForFunction(() => (window as any).__biolab.registry.has('utero'), null, { timeout: 30_000 });
+    expect((await bl()).has).toBe(true);
+    await page.getByTestId('kidney-cut').click();
+    await expect(page.getByRole('button', { name: 'Fechar os rins' })).toBeVisible();
+    await page.getByTestId('brain-cut').click();
+    await expect(page.getByRole('button', { name: 'Fechar o encéfalo' })).toBeVisible();
+    expect((await bl()).n).toBe(true);
+    // feminino e masculino se alternam
+    expect((await bl()).f).toBe(false);
+    await page.getByTestId('toggle-sex').click();
+    await page.waitForTimeout(300);
+    expect(await bl()).toMatchObject({ f: true, m: false });
+    await page.getByTestId('toggle-sex').click();
+    await page.waitForTimeout(300);
+    expect(await bl()).toMatchObject({ f: false, m: true });
+    // a ficha do útero vem do conteúdo próprio
+    await page.getByRole('combobox', { name: 'Buscar estrutura anatômica' }).fill('utero');
+    await page.keyboard.press('Enter');
+    const panel = page.getByTestId('scientific-panel');
+    await expect(panel.locator('#sci-title')).toHaveText('Útero');
+    await expect(panel).toContainText('endométrio');
+    expect(await bl()).toMatchObject({ f: true, m: false });
+  });
+
   test('roteiros de aula: um botão do roteiro mostra um sistema e seleciona um órgão', async ({ page }) => {
     await page.getByTestId('lessons-toggle').click();
     await expect(page.getByTestId('lessons-panel')).toBeVisible();

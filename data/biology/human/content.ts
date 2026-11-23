@@ -9,6 +9,7 @@
  * Biology educator before commercial release (see SCIENTIFIC_CONTENT.md).
  */
 import type { Reference } from '@/data/biology/schema';
+import { ORGAN_CONTENT } from './organs-content';
 
 export interface HumanContent {
   category: string;
@@ -371,8 +372,8 @@ export const HUMAN_CONTENT: Record<string, HumanContent> = {
     category: 'Órgão',
     description: 'Órgão muscular oco e distensível localizado na pelve.',
     function: 'Armazena temporariamente a urina produzida pelos rins e conduzida pelos ureteres, até sua eliminação pela uretra (micção).',
-    educational: 'Os rins não estão incluídos nesta versão do modelo por restrição de licença do arquivo 3D original (uso não comercial). Uma versão própria está prevista.',
-    related: ['ureter', 'urethra', 'prostate'],
+    educational: 'A bexiga de um adulto comporta cerca de 400 a 600 mL. Quando a parede se distende, receptores enviam sinais à medula e ao encéfalo, e surge a vontade de urinar.',
+    related: ['rins', 'ureter', 'urethra', 'prostate', 'utero'],
     topics: ['Sistema urinário', 'Excreção'],
     refs: ['apOrgans'],
   },
@@ -680,14 +681,18 @@ export const SYSTEM_NOTES: Record<string, string> = {
   fascias: 'Tecido conjuntivo associado aos músculos e articulações: fáscias envolvem e separam músculos, ligamentos unem ossos e bolsas sinoviais reduzem o atrito.',
   coracao: 'Parte do coração, órgão central do sistema cardiovascular.',
   vasos: 'Vaso sanguíneo do sistema cardiovascular. Artérias levam o sangue do coração aos tecidos; veias o trazem de volta.',
-  nervoso: 'Parte do sistema nervoso periférico ou dos órgãos dos sentidos.',
+  nervoso: 'Parte do sistema nervoso: encéfalo, medula espinal, nervos ou órgãos dos sentidos.',
   respiratorio: 'Parte do sistema respiratório, responsável pela condução do ar e pelas trocas gasosas.',
   digestorio: 'Parte do sistema digestório, responsável pela digestão dos alimentos e pela absorção de nutrientes.',
   urinario: 'Parte do sistema urinário, que forma, armazena e elimina a urina.',
   reprodutor: 'Parte do sistema reprodutor masculino.',
+  'reprodutor-feminino': 'Parte do sistema reprodutor feminino.',
   endocrino: 'Parte do sistema endócrino, formado por glândulas que liberam hormônios no sangue.',
   linfatico: 'Parte do sistema linfático, que participa da defesa do organismo e do retorno de líquidos ao sangue.',
 };
+
+// Organs modelled by BioLab 3D (kidneys, brain, female reproductive system).
+Object.assign(HUMAN_CONTENT, ORGAN_CONTENT);
 
 // Side-agnostic composites share the same text.
 HUMAN_CONTENT['mao-esq'] = HUMAN_CONTENT['mao-dir'];

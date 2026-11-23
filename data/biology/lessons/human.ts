@@ -231,13 +231,25 @@ export const HUMAN_LESSONS: Lesson[] = [
       {
         heading: 'Órgãos do sistema',
         text:
-          'Os rins ficam na região lombar, atrás do peritônio, e recebem 20% do sangue bombeado pelo coração pelas artérias renais. A urina formada desce pelos ureteres até a bexiga, que a armazena (até ~500 mL), e sai pela uretra. Nesta versão do modelo 3D os rins não estão incluídos; mostre as artérias renais, os ureteres e a bexiga.',
+          'Os rins ficam na região lombar, atrás do peritônio, e recebem 20% do sangue bombeado pelo coração pelas artérias renais. A urina formada desce pelos ureteres até a bexiga, que a armazena (até ~500 mL), e sai pela uretra. Mostre os rins com as artérias e veias renais chegando ao hilo e os ureteres descendo até a bexiga.',
         actions: [
           { label: 'Mostrar sistema urinário', group: 'urinario' },
+          { label: 'Rins', structure: 'rins' },
           { label: 'Artéria renal esquerda', structure: 'left-renal-artery' },
           { label: 'Ureter direito', structure: 'ureter-dir' },
           { label: 'Bexiga', structure: 'urinary-bladder' },
           { label: 'Uretra', structure: 'urethra' },
+        ],
+      },
+      {
+        heading: 'Por dentro do rim',
+        text:
+          'Use o botão "Corte do rim" (painel da esquerda) para abrir os dois rins num corte frontal. Por fora fica o córtex, mais claro; por dentro, a medula, formada por pirâmides escuras e estriadas cujas pontas (papilas) apontam para o centro. A urina pinga das papilas nos cálices, que se juntam na pelve renal, a origem do ureter.',
+        bullets: ['Córtex: glomérulos e túbulos contorcidos (filtração e reabsorção).', 'Medula: alças de Henle e ductos coletores (concentração da urina).', 'Pelve renal: coleta a urina e a passa ao ureter.'],
+        actions: [
+          { label: 'Córtex renal', structure: 'cortex-renal-esq' },
+          { label: 'Medula renal (pirâmides)', structure: 'medula-renal-esq' },
+          { label: 'Pelve renal', structure: 'pelve-renal-esq' },
         ],
       },
       {
@@ -288,10 +300,28 @@ export const HUMAN_LESSONS: Lesson[] = [
         text:
           'Encéfalo (cérebro, cerebelo e tronco encefálico) e medula espinal, protegidos por crânio, coluna, meninges e líquor. O córtex cerebral comanda movimento voluntário, sensações, linguagem e memória; o cerebelo coordena e equilibra; o tronco (bulbo) controla respiração e batimentos; o hipotálamo regula temperatura, fome, sede e a hipófise. A medula conduz informações e faz reflexos.',
         actions: [
+          { label: 'Encéfalo', structure: 'encefalo' },
+          { label: 'Cerebelo', structure: 'cerebelo' },
+          { label: 'Tronco encefálico', structure: 'tronco-encefalico' },
           { label: 'Crânio', structure: 'cranio' },
           { label: 'Coluna vertebral', structure: 'coluna-vertebral' },
           { label: 'Corno anterior da medula (motor)', structure: 'anterior-horn-of-spinal-cord' },
           { label: 'Corno posterior da medula (sensitivo)', structure: 'posterior-horn-of-spinal-cord' },
+        ],
+      },
+      {
+        heading: 'Lobos do cérebro e corte do encéfalo',
+        text:
+          'Cada hemisfério tem quatro lobos, separados por sulcos: frontal (planejamento, movimento voluntário, fala), parietal (tato, dor, temperatura, posição do corpo), temporal (audição, compreensão da linguagem, memória) e occipital (visão). No botão "Corte do encéfalo" o modelo é aberto no plano mediano: aparecem o corpo caloso, que une os hemisférios, o ventrículo lateral (cheio de líquor), o tálamo e o hipotálamo, além do cerebelo e do tronco encefálico.',
+        bullets: ['Cada hemisfério controla o lado oposto do corpo: as fibras motoras se cruzam no bulbo.', 'O hipotálamo comanda a hipófise e liga o sistema nervoso ao endócrino.'],
+        actions: [
+          { label: 'Lobo frontal', structure: 'lobo-frontal-esq' },
+          { label: 'Lobo parietal', structure: 'lobo-parietal-esq' },
+          { label: 'Lobo temporal', structure: 'lobo-temporal-esq' },
+          { label: 'Lobo occipital', structure: 'lobo-occipital-esq' },
+          { label: 'Corpo caloso', structure: 'corpo-caloso' },
+          { label: 'Hipotálamo', structure: 'hipotalamo' },
+          { label: 'Bulbo', structure: 'bulbo' },
         ],
       },
       {
@@ -501,7 +531,7 @@ export const HUMAN_LESSONS: Lesson[] = [
       {
         heading: 'Sistema reprodutor masculino',
         text:
-          'Testículos (na bolsa escrotal, 2 °C abaixo do corpo) produzem espermatozoides nos túbulos seminíferos e testosterona. Os espermatozoides amadurecem no epidídimo, sobem pelo ducto deferente e recebem secreções das vesículas seminais e da próstata, formando o sêmen, que sai pela uretra. O modelo 3D traz os órgãos masculinos; os femininos ainda não estão incluídos.',
+          'Testículos (na bolsa escrotal, 2 °C abaixo do corpo) produzem espermatozoides nos túbulos seminíferos e testosterona. Os espermatozoides amadurecem no epidídimo, sobem pelo ducto deferente e recebem secreções das vesículas seminais e da próstata, formando o sêmen, que sai pela uretra. Use o botão "Ver sistema feminino" / "Ver sistema masculino" para alternar entre os dois.',
         actions: [
           { label: 'Mostrar sistema reprodutor', group: 'reprodutor' },
           { label: 'Testículo', structure: 'testis' },
@@ -515,6 +545,15 @@ export const HUMAN_LESSONS: Lesson[] = [
         heading: 'Sistema reprodutor feminino e ciclo menstrual',
         text:
           'Ovários produzem ovócitos (desde o nascimento, em folículos) e os hormônios estrogênio e progesterona. Tubas uterinas captam o ovócito e é nelas que ocorre a fecundação; o útero abriga o embrião; a vagina é o canal do parto. Ciclo de ~28 dias: FSH faz o folículo crescer e produzir estrogênio (espessa o endométrio); pico de LH causa a ovulação (~dia 14); o corpo lúteo produz progesterona; sem gravidez ele regride e o endométrio descama (menstruação).',
+        bullets: ['No modelo, repare que o útero fica inclinado para a frente, sobre a bexiga, e que as fímbrias da tuba envolvem o ovário sem estar presas a ele.'],
+        actions: [
+          { label: 'Mostrar sistema feminino', group: 'reprodutor-feminino' },
+          { label: 'Ovário', structure: 'ovario-esq' },
+          { label: 'Tuba uterina', structure: 'tuba-uterina-esq' },
+          { label: 'Útero', structure: 'utero' },
+          { label: 'Colo do útero', structure: 'colo-do-utero' },
+          { label: 'Vagina', structure: 'vagina' },
+        ],
       },
       {
         heading: 'Fecundação e gestação',

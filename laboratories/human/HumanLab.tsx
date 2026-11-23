@@ -5,6 +5,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { LabCanvas } from '@/components/3d/LabCanvas';
 import { GltfModel } from '@/components/3d/GltfModel';
+import { ProceduralOrgans } from './ProceduralOrgans';
+import { FEMALE_GROUP } from './extra-catalog';
 import { ModelSlot } from '@/components/3d/ModelSlot';
 import { SceneSync } from '@/components/3d/SceneSync';
 import { SelectionLabel } from '@/components/3d/SelectionLabel';
@@ -37,6 +39,27 @@ import { HUMAN_PROCESSES } from './processes';
 
 const CATALOG_URL = '/models/human/v1/catalog.json';
 
+type OrganCut = 'coracao' | 'rim' | 'encefalo';
+
+/**
+ * Clipping for each cut-away view. Planes clip where `n·p + d < 0`; with
+ * `intersect`, only the region clipped by every plane is removed.
+ *  - heart: coronal plane through its centre (front half removed);
+ *  - kidneys: coronal plane through the kidneys, only above the bladder;
+ *  - brain: mid-sagittal plane, only inside the head (right half removed).
+ */
+function cutPlanes(cut: OrganCut, index: HumanIndex): { group: string; planes: THREE.Plane[]; intersect: boolean; classes?: string[] } {
+  if (cut === 'coracao') {
+    const c = heartCentre(index);
+    return { group: 'coracao', planes: [new THREE.Plane(new THREE.Vector3(0, 0, -1), c.z + 0.004)], intersect: false };
+  }
+  if (cut === 'rim') {
+    const z = ['cortex-renal-esq', 'cortex-renal-dir'].map((id) => index.meshInfo.get(id)?.center[2] ?? -0.017);
+    return { group: 'urinario', planes: [new THREE.Plane(new THREE.Vector3(0, 0, -1), (z[0] + z[1]) / 2), new THREE.Plane(new THREE.Vector3(0, -1, 0), 1.035)], intersect: true, classes: ['cortex-renal', 'medula-renal', 'pelve-renal'] };
+  }
+  return { group: 'nervoso', planes: [new THREE.Plane(new THREE.Vector3(1, 0, 0), -0.0005), new THREE.Plane(new THREE.Vector3(0, -1, 0), 1.54)], intersect: true };
+}
+
 const PRESET: CameraPreset = { position: [0, 0.88, 3.8], target: [0, 0.86, 0], distance: 3.8, minDistance: 0.08, maxDistance: 9 };
 const DEFAULT_DEPTH = 1; // open on the muscular layer, like an anatomy atlas
 const THEME_KEY = 'biolab.labTheme';
@@ -51,11 +74,12 @@ const LAYER_LABEL: Record<string, string> = {
   respiratorio: 'Respiratório',
   digestorio: 'Digestório',
   urinario: 'Urinário',
-  reprodutor: 'Reprodutor',
+  reprodutor: 'Reprodutor masculino',
+  [FEMALE_GROUP]: 'Reprodutor feminino',
   endocrino: 'Endócrino',
   linfatico: 'Linfático',
 };
-const LAYER_ORDER = ['muscular', 'fascias', 'esqueletico', 'vasos', 'nervoso', 'coracao', 'respiratorio', 'digestorio', 'urinario', 'reprodutor', 'endocrino', 'linfatico'];
+const LAYER_ORDER = ['muscular', 'fascias', 'esqueletico', 'vasos', 'nervoso', 'coracao', 'respiratorio', 'digestorio', 'urinario', 'reprodutor', FEMALE_GROUP, 'endocrino', 'linfatico'];
 
 const REPRESENTATION = 'Modelo realista (dados anatômicos reais)';
 
@@ -69,7 +93,8 @@ export function HumanLab({ canUseStudio, tierLabel }: { canUseStudio: boolean; t
   const [layersOpen, setLayersOpen] = useState(false);
   const [depth, setDepth] = useState(DEFAULT_DEPTH);
   const [dark, setDark] = useState(false);
-  const [heartCut, setHeartCut] = useState(false);
+  /** Active cut-away view: heart (coronal), kidneys (coronal) or brain (mid-sagittal). */
+  const [cut, setCut] = useState<OrganCut | null>(null);
   const [lessonsOpen, setLessonsOpen] = useState(false);
   const [lessonId, setLessonId] = useState<string | null>(null);
   const lessons = useMemo(() => lessonsFor('anatomia-humana'), []);
@@ -104,7 +129,7 @@ export function HumanLab({ canUseStudio, tierLabel }: { canUseStudio: boolean; t
         if (cancelled) return;
         const idx = buildHumanIndex(raw);
         // blood vessels are part of what a teacher expects to see when the muscles are peeled away
-        useViewer.getState().init(raw.groups.map((g) => ({ id: g.id, visible: g.id === 'vasos' ? true : g.defaultVisible, opacity: g.defaultOpacity })));
+        useViewer.getState().init(idx.raw.groups.map((g) => ({ id: g.id, visible: g.id === 'vasos' ? true : g.defaultVisible, opacity: g.defaultOpacity })));
         applyDepth(DEFAULT_DEPTH);
         setIndex(idx);
         performance.mark?.('biolab:catalog-ready');
@@ -118,18 +143,35 @@ export function HumanLab({ canUseStudio, tierLabel }: { canUseStudio: boolean; t
     };
   }, []);
 
-  // ---- heart cut-away: a frontal clipping plane through the heart (coronal section)
+  // ---- cut-away views: clipping planes on one group (see cutPlanes)
   useEffect(() => {
-    if (!index) return;
-    if (!heartCut) {
-      library.setGroupClipping('coracao', null);
-      return;
-    }
-    const c = heartCentre(index);
-    library.setGroupClipping('coracao', [new THREE.Plane(new THREE.Vector3(0, 0, -1), c.z + 0.004)]);
+    if (!index || !cut) return;
+    const { group, planes, intersect, classes } = cutPlanes(cut, index);
+    library.setGroupClipping(group, planes, intersect, classes);
     useViewer.setState({}); // notify SceneSync so the canvas repaints
-    return () => library.setGroupClipping('coracao', null);
-  }, [heartCut, index, library]);
+    return () => {
+      library.setGroupClipping(group, null);
+      useViewer.setState({});
+    };
+  }, [cut, index, library]);
+
+  // ---- one reproductive system at a time: switching the female layer on hides the male one and vice versa
+  const lastRepro = useRef<{ m: boolean; f: boolean }>({ m: false, f: false });
+  useEffect(() => {
+    const m = !!s.groupVisible.reprodutor;
+    const f = !!s.groupVisible[FEMALE_GROUP];
+    const prev = lastRepro.current;
+    lastRepro.current = { m, f };
+    if (m && f) useViewer.getState().setGroupVisible(prev.f ? FEMALE_GROUP : 'reprodutor', false);
+    // the catalog's urethra is the long male one: hide it while the female organs are shown
+    const st = useViewer.getState();
+    const femaleOnly = f && !(m && !prev.m);
+    if (femaleOnly && !st.hiddenMeshIds.urethra) st.hideMeshes(['urethra']);
+    else if (!femaleOnly && st.hiddenMeshIds.urethra && prev.f) {
+      const { urethra: _u, ...rest } = st.hiddenMeshIds;
+      useViewer.setState({ hiddenMeshIds: rest });
+    }
+  }, [s.groupVisible]);
 
   // ---- lazy model loading: a model is requested the first time one of its groups becomes visible
   useEffect(() => {
@@ -236,6 +278,7 @@ export function HumanLab({ canUseStudio, tierLabel }: { canUseStudio: boolean; t
       const need = group === 'tegumentar' ? 0 : group === 'muscular' || group === 'fascias' ? 1 : group === 'esqueletico' ? 2 : 3;
       setDepth(need);
       applyDepth(need);
+      st.setGroupOpacity('vasos', 1);
       st.setGroupVisible(group, true);
       st.setGroupOpacity(group, 1);
       if (need === 3) {
@@ -249,11 +292,68 @@ export function HumanLab({ canUseStudio, tierLabel }: { canUseStudio: boolean; t
     [index],
   );
 
-  /** A button of a lesson script: show a structure, a whole system or start an animation. */
+  /** Turns the camera to a side, then frames the meshes (framing keeps the new direction). */
+  const frame = useCallback((view: 'frente' | 'esquerda' | 'direita', meshIds: string[]) => {
+    setTimeout(() => useViewer.getState().command({ type: 'view', view }), 100);
+    setTimeout(() => useViewer.getState().command({ type: 'focus', meshIds }), 450);
+  }, []);
+
+  /** Classroom views of the organs BioLab models itself: kidneys, brain and the two reproductive systems. */
+  const showOrgan = useCallback(
+    (what: 'rins' | 'encefalo' | 'reprodutor-fem' | 'reprodutor-masc', side?: 'esquerda' | 'direita') => {
+      if (!index) return;
+      const st = useViewer.getState();
+      if (what === 'rins') {
+        showSystem('urinario');
+        for (const g of ['nervoso', 'linfatico', 'reprodutor', FEMALE_GROUP]) st.setGroupVisible(g, false);
+        st.setGroupOpacity('digestorio', 0.1);
+        // renal vessels stay as context, faded so the kidneys read clearly
+        st.setGroupOpacity('vasos', 0.35);
+        frame('frente', index.meshesOf('rins'));
+        return;
+      }
+      if (what === 'encefalo') {
+        showSystem('nervoso');
+        // the cerebral arteries would hide the cortex
+        for (const g of ['vasos', 'linfatico']) st.setGroupVisible(g, false);
+        st.setGroupVisible('esqueletico', true);
+        st.setGroupOpacity('esqueletico', 0.1);
+        frame(side ?? 'esquerda', index.meshesOf('encefalo'));
+        return;
+      }
+      const group = what === 'reprodutor-fem' ? FEMALE_GROUP : 'reprodutor';
+      st.setGroupVisible(what === 'reprodutor-fem' ? 'reprodutor' : FEMALE_GROUP, false);
+      showSystem(group);
+      st.setGroupVisible('nervoso', false);
+      st.setGroupOpacity('digestorio', 0.12);
+      st.setGroupOpacity('vasos', 0.35);
+      frame('frente', index.raw.meshes.filter((m) => m.g === group).map((m) => m.id));
+    },
+    [frame, index, showSystem],
+  );
+
+  const toggleCut = useCallback(
+    (which: OrganCut) => {
+      if (cut === which) {
+        setCut(null);
+        return;
+      }
+      if (which === 'coracao') showCirculation(true);
+      else if (which === 'rim') showOrgan('rins');
+      // the brain's cut face looks towards the body's right side
+      else showOrgan('encefalo', 'direita');
+      setCut(which);
+    },
+    [cut, showCirculation, showOrgan],
+  );
+
+
   const runLessonAction = useCallback(
     (a: LessonAction) => {
       if (!index) return;
-      if (a.group) showSystem(a.group);
+      if (a.group === FEMALE_GROUP) showOrgan('reprodutor-fem');
+      else if (a.group === 'reprodutor') showOrgan('reprodutor-masc');
+      else if (a.group) showSystem(a.group);
       if (a.structure) {
         const id = index.structures.has(a.structure) ? a.structure : index.structures.has(`${a.structure}-dir`) ? `${a.structure}-dir` : null;
         if (id) {
@@ -263,7 +363,7 @@ export function HumanLab({ canUseStudio, tierLabel }: { canUseStudio: boolean; t
       }
       if (a.process) startProcess(a.process);
     },
-    [index, selectStructure, showSystem, startProcess],
+    [index, selectStructure, showOrgan, showSystem, startProcess],
   );
 
   const openRegion = useCallback(
@@ -472,8 +572,10 @@ export function HumanLab({ canUseStudio, tierLabel }: { canUseStudio: boolean; t
       <main className="absolute inset-0" aria-label="Visualização 3D do corpo humano">
         {index && (
           <LabCanvas dark={dark} cameraPreset={PRESET} onPointerMissed={() => { useViewer.getState().select(null); setRegion(null); }}>
+            <ProceduralOrgans meshInfo={index.meshInfo} library={library} hover={!pres && s.quality !== 'economico'} onPick={onPick} />
             {requested.map((modelId) => {
               const model = index.raw.models.find((m) => m.id === modelId)!;
+              if (!model.url) return null; // organs modelled in code are always mounted (above)
               return (
                 <ModelSlot key={modelId} modelId={modelId}>
                   <GltfModel model={model} meshInfo={index.meshInfo} library={library} hover={!pres && s.quality !== 'economico'} onPick={onPick} />
@@ -563,7 +665,7 @@ export function HumanLab({ canUseStudio, tierLabel }: { canUseStudio: boolean; t
       {/* ---------- layers (floating, left) */}
       {!hideUi && index && (
         <aside
-          className={`float-card absolute top-20 left-3 z-20 flex max-h-[calc(100%-11rem)] w-[248px] flex-col sm:left-4 ${pres ? '' : layersOpen ? '' : 'max-lg:hidden'}`}
+          className={`float-card absolute top-20 left-3 z-20 scroll-thin flex max-h-[calc(100%-11rem)] w-[248px] flex-col overflow-y-auto sm:left-4 ${pres ? '' : layersOpen ? '' : 'max-lg:hidden'}`}
           aria-label="Camadas"
           data-testid={pres ? undefined : 'layers-panel'}
         >
@@ -577,8 +679,8 @@ export function HumanLab({ canUseStudio, tierLabel }: { canUseStudio: boolean; t
               <button type="button" className="btn btn-ghost h-8 px-2.5 text-[12.5px]" onClick={() => showCirculation(true)} data-testid="view-circulation">
                 <Icon name="focus" size={14} /> Ver coração e vasos
               </button>
-              <button type="button" className={`btn h-8 px-2.5 text-[12.5px] ${heartCut ? 'btn-primary' : 'btn-ghost'}`} aria-pressed={heartCut} onClick={() => { if (!heartCut) showCirculation(true); setHeartCut((v) => !v); }} data-testid="heart-cut">
-                <Icon name="layers" size={14} /> {heartCut ? 'Fechar o coração' : 'Corte do coração'}
+              <button type="button" className={`btn h-8 px-2.5 text-[12.5px] ${cut === 'coracao' ? 'btn-primary' : 'btn-ghost'}`} aria-pressed={cut === 'coracao'} onClick={() => toggleCut('coracao')} data-testid="heart-cut">
+                <Icon name="layers" size={14} /> {cut === 'coracao' ? 'Fechar o coração' : 'Corte do coração'}
               </button>
             </div>
             <ul className="mt-2 space-y-1">
@@ -599,8 +701,25 @@ export function HumanLab({ canUseStudio, tierLabel }: { canUseStudio: boolean; t
               })}
             </ul>
           </div>
+          <div className="border-b border-line p-3" data-testid="organ-tools">
+            <p className="eyebrow mb-2 px-1">Rins, encéfalo e reprodução</p>
+            <div className="flex flex-wrap gap-1.5">
+              <button type="button" className={`btn h-8 px-2.5 text-[12.5px] ${cut === 'rim' ? 'btn-primary' : 'btn-ghost'}`} aria-pressed={cut === 'rim'} onClick={() => toggleCut('rim')} data-testid="kidney-cut">
+                <Icon name="layers" size={14} /> {cut === 'rim' ? 'Fechar os rins' : 'Corte do rim'}
+              </button>
+              <button type="button" className={`btn h-8 px-2.5 text-[12.5px] ${cut === 'encefalo' ? 'btn-primary' : 'btn-ghost'}`} aria-pressed={cut === 'encefalo'} onClick={() => toggleCut('encefalo')} data-testid="brain-cut">
+                <Icon name="layers" size={14} /> {cut === 'encefalo' ? 'Fechar o encéfalo' : 'Corte do encéfalo'}
+              </button>
+              <button type="button" className="btn btn-ghost h-8 px-2.5 text-[12.5px]" onClick={() => showOrgan('encefalo')} data-testid="view-brain">
+                <Icon name="focus" size={14} /> Ver encéfalo
+              </button>
+              <button type="button" className="btn btn-ghost h-8 px-2.5 text-[12.5px]" onClick={() => showOrgan(s.groupVisible[FEMALE_GROUP] ? 'reprodutor-masc' : 'reprodutor-fem')} data-testid="toggle-sex">
+                <Icon name="rotate" size={14} /> {s.groupVisible[FEMALE_GROUP] ? 'Ver sistema masculino' : 'Ver sistema feminino'}
+              </button>
+            </div>
+          </div>
           {!pres && (
-            <div className="scroll-thin min-h-0 flex-1 overflow-y-auto p-2">
+            <div className="shrink-0 p-2">
               <p className="eyebrow px-1.5 pt-1 pb-2">Sistemas</p>
               <LayersPanel groups={index.raw.groups} models={index.raw.models} />
             </div>

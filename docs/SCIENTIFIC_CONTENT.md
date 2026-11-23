@@ -53,4 +53,5 @@ conceitos (`curated` e `reviewedBy`/`reviewedAt`).
 - Plantas: a planta é uma eudicotiledônea genérica (como um feijoeiro), não uma espécie real; o fruto
   aberto lembra um tomate. Cores dos cortes seguem a convenção das lâminas coradas (xilema
   avermelhado, floema azulado). A germinação mostrada é a epígea do feijão.
-- Quando o modelo não mostra algo (rins, orelha interna), o painel diz isso em vez de omitir.
+- Quando o modelo não mostra algo (orelha interna), o painel diz isso em vez de omitir.
+- Rins, encéfalo e órgãos femininos são modelos didáticos próprios (formas e proporções simplificadas); os textos dizem o que o modelo mostra (córtex, pirâmides, lobos) e o que é microscópico (néfron, folículos).

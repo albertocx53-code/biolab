@@ -21,11 +21,11 @@ componente em `laboratories/<lab>/`.
 
 ## Corpo Humano: pendências
 
-- Rins, orelha interna e encéfalo detalhado (ver `MODEL_LICENSES.md`).
+- Orelha interna (ver `MODEL_LICENSES.md`). Rins, encéfalo e órgãos femininos internos já são modelados em `laboratories/human/organs.ts`.
 - 148 nomes ainda sem tradução para o português (aparecem em inglês/latim).
 - Conteúdo curado para ~50 estruturas; as demais mostram nome, sistema e o aviso "em elaboração".
 - Processos animados de respiração e contração muscular (circulação e ciclo cardíaco já existem em `laboratories/human/CirculationLayer.tsx`).
-- Modelo feminino (o Z-Anatomy é masculino).
+- Corpo feminino completo (pelve, mamas, órgãos externos): hoje só os órgãos reprodutores internos alternam com os masculinos.
 
 ## Motor procedural compartilhado
 

@@ -15,6 +15,7 @@ Regra do projeto: o BioLab 3D é um produto pago, então **nenhum recurso com cl
 | Imagem `card-celulas.webp` | Renderizada por nós a partir do modelo procedural | Própria | Sim | Nenhuma |
 | Plantas: planta com flores, flor, semente e germinação, cortes de folha, caule e raiz (`laboratories/plants/`) | Geometria procedural escrita pelo BioLab 3D (nenhum arquivo de terceiros) | Própria | Sim | Nenhuma |
 | Imagem `card-plantas.webp` | Renderizada por nós a partir do modelo procedural | Própria | Sim | Nenhuma |
+| Rins, encéfalo e sistema reprodutor feminino do corpo humano (`laboratories/human/organs.ts`) | Geometria procedural escrita pelo BioLab 3D, posicionada pelos pontos de referência do catálogo (vasos renais, crânio, medula, bexiga) | Própria | Sim | Nenhuma |
 | Decodificador Draco (`public/draco/`) | three.js | MIT | Sim | Aviso de copyright |
 | Fontes Inter e Manrope | @fontsource | SIL OFL 1.1 | Sim | — |
 
@@ -39,9 +40,9 @@ no momento da exportação (`tools/blender/export_z_anatomy.py`, expressões `NO
 
 | Estruturas | Motivo | Consequência |
 |---|---|---|
-| Rins e pelve renal | Modelos de terceiros sob CC BY-NC | Sistema urinário mostra bexiga, ureteres e uretra; o painel da bexiga avisa sobre a ausência dos rins |
+| Rins e pelve renal | Modelos de terceiros sob CC BY-NC | Substituídos por rins modelados pelo BioLab (córtex, pirâmides, pelve e cálices) |
 | Orelha interna (cóclea, vestíbulo, canais semicirculares) | CC BY-NC-SA (Universidade de Dundee) | Os ossículos da audição estão presentes; a orelha interna não |
-| Parcelamento do encéfalo, cerebelo, núcleos, ventrículos | Origem "Brainder/White matter" sem licença declarada | O sistema nervoso mostra nervos periféricos e medula, mas não o encéfalo detalhado |
+| Parcelamento do encéfalo, cerebelo, núcleos, ventrículos | Origem "Brainder/White matter" sem licença declarada | Substituído por um encéfalo modelado pelo BioLab (lobos, cerebelo, tronco, corpo caloso, tálamo, hipotálamo, ventrículos laterais) |
 
 Também foram retirados, por motivo **visual** (não de licença): omentos, mesocólon, pleura e
 segmentos do fígado, que cobriam órgãos inteiros.
@@ -56,9 +57,11 @@ segmentos do fígado, que cobriam órgãos inteiros.
 
 ## Como substituir as partes que faltam
 
-Para rins, orelha interna e encéfalo, as opções a avaliar na próxima fase são: modelar do zero
-(propriedade do projeto), contratar modelagem, ou licenciar modelos com licença comercial
-explícita. Qualquer novo arquivo deve ganhar uma linha nesta tabela antes de ser publicado.
+Rins, encéfalo e o sistema reprodutor feminino (que o corpo do Z-Anatomy não tem) já são
+modelados em código pelo próprio projeto (`laboratories/human/organs.ts`): formas didáticas,
+sem arquivo de terceiros. Falta a orelha interna; as opções são modelar do zero, contratar
+modelagem ou licenciar um modelo com licença comercial explícita. Qualquer novo arquivo deve
+ganhar uma linha nesta tabela antes de ser publicado.
 
 ## Reproduzir a exportação
 

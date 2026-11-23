@@ -6,6 +6,7 @@
 import type { CatalogGroup, CatalogMesh, CatalogModel } from '@/engine/types';
 import type { Attribution, Structure } from '@/data/biology/schema';
 import { HUMAN_CONTENT, REFS, SYSTEM_NOTES, type HumanContent } from '@/data/biology/human/content';
+import { EXTRA_BOUNDS, EXTRA_MESHES, EXTRA_MODEL_ID, EXTRA_ORGAN_COMPOSITES, FEMALE_GROUP } from './extra-catalog';
 
 export interface RawHumanCatalog {
   version: number;
@@ -38,6 +39,7 @@ export const GROUP_SYSTEM_NAME: Record<string, string> = {
   digestorio: 'Sistema digestório',
   urinario: 'Sistema urinário',
   reprodutor: 'Sistema reprodutor',
+  [FEMALE_GROUP]: 'Sistema reprodutor',
   endocrino: 'Sistema endócrino',
   linfatico: 'Sistema linfático',
 };
@@ -102,6 +104,30 @@ export const EXTRA_COMPOSITES: RawHumanCatalog['composites'] = [
   { id: 'valva-pulmonar', n: 'Valva pulmonar', la: 'Valva trunci pulmonalis', g: 'coracao', members: ['anterior-semilunar-leaflet-of-pulmonary-valve', 'left-semilunar-leaflet-of-pulmonary-valve', 'right-semilunar-leaflet-of-pulmonary-valve'] },
 ];
 
+/**
+ * Adds the organs BioLab models procedurally (kidneys, brain, female
+ * reproductive system) to a generated catalog: one extra model, one extra
+ * layer and their meshes and teaching composites. Idempotent.
+ */
+export function withExtraOrgans(input: RawHumanCatalog): RawHumanCatalog {
+  if (input.models.some((m) => m.id === EXTRA_MODEL_ID)) return { ...input };
+  const ids = new Set(input.meshes.map((m) => m.id));
+  const meshes = EXTRA_MESHES.filter((m) => !ids.has(m.id)).map((m) => ({ id: m.id, m: EXTRA_MODEL_ID, g: m.g, c: m.c, n: m.n, la: m.la, en: m.en, ...EXTRA_BOUNDS[m.id] }));
+  const male = input.groups.find((g) => g.id === 'reprodutor');
+  const groups = input.groups.map((g) => (g.id === 'reprodutor' && !/masculino/i.test(g.name) ? { ...g, name: `${g.name} (masculino)` } : g));
+  if (!groups.some((g) => g.id === FEMALE_GROUP))
+    groups.push({ id: FEMALE_GROUP, name: 'Sistema reprodutor (feminino)', modelId: EXTRA_MODEL_ID, color: '#D87A9A', defaultVisible: false, defaultOpacity: 1, order: (male?.order ?? 10) + 0.5 });
+  groups.sort((a, b) => a.order - b.order);
+  const compIds = new Set(input.composites.map((c) => c.id));
+  return {
+    ...input,
+    models: [...input.models, { id: EXTRA_MODEL_ID, url: '', bytes: 0, label: 'Órgãos modelados pelo BioLab 3D' }],
+    groups,
+    meshes: [...input.meshes, ...meshes],
+    composites: [...input.composites, ...EXTRA_ORGAN_COMPOSITES.filter((c) => !compIds.has(c.id))],
+  };
+}
+
 function contentFor(id: string): HumanContent | undefined {
   return HUMAN_CONTENT[id] ?? HUMAN_CONTENT[baseId(id)];
 }
@@ -117,10 +143,12 @@ export function normalize(s: string) {
 }
 
 export function buildHumanIndex(input: RawHumanCatalog): HumanIndex {
-  const known = new Set(input.meshes.map((m) => m.id));
-  const existing = new Set(input.composites.map((c) => c.id));
+  const raw = withExtraOrgans(input);
+  const known = new Set(raw.meshes.map((m) => m.id));
+  const existing = new Set(raw.composites.map((c) => c.id));
   const extra = EXTRA_COMPOSITES.map((c) => ({ ...c, members: c.members.filter((m) => known.has(m)) })).filter((c) => c.members.length && !existing.has(c.id));
-  const raw: RawHumanCatalog = { ...input, composites: [...input.composites, ...extra] };
+  raw.composites = [...raw.composites, ...extra];
+  const modelled = new Set(EXTRA_MESHES.map((m) => m.id));
   const structures = new Map<string, Structure>();
   const meshInfo = new Map<string, CatalogMesh>();
   const members = new Map<string, string[]>();
@@ -150,7 +178,7 @@ export function buildHumanIndex(input: RawHumanCatalog): HumanIndex {
       educationalTopics: c?.topics ?? [GROUP_SYSTEM_NAME[group] ?? group],
       modelMeshIds: meshes,
       scientificReferences: (c?.refs ?? []).map((r) => REFS[r]),
-      assetAttributions: HUMAN_ATTRIBUTIONS,
+      assetAttributions: meshes.every((m) => modelled.has(m)) ? [] : HUMAN_ATTRIBUTIONS,
       contentReviewed: !!c,
     };
   };

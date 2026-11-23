@@ -32,9 +32,6 @@ interface Props {
  */
 export function GltfModel({ model, meshInfo, library, hover, onPick }: Props) {
   const gltf = useGLTF(model.url, DRACO_PATH);
-  const setHover = useViewer((s) => s.hover);
-  const invalidate = useThree((s) => s.invalidate);
-  const lastHover = useRef(0);
 
   const root = useMemo(() => {
     const scene = gltf.scene;
@@ -45,40 +42,11 @@ export function GltfModel({ model, meshInfo, library, hover, onPick }: Props) {
         o.visible = true;
         return;
       }
-      const id = mesh.name;
-      const info = meshInfo.get(id);
-      const group = info?.group ?? 'outros';
-      const mat = library.get(group, info?.material ?? 'default');
-      mesh.userData.meshId = id;
-      mesh.userData.group = group;
-      mesh.userData.base = mat;
-      mesh.material = mat;
-      if (!mesh.geometry.boundsTree) mesh.geometry.computeBoundsTree();
-      mesh.matrixAutoUpdate = false;
-      mesh.updateMatrix();
+      prepareMesh(mesh, mesh.name, meshInfo, library);
     });
     scene.updateMatrixWorld(true);
     return scene;
   }, [gltf, meshInfo, library]);
-
-  useEffect(() => {
-    // A Suspense boundary may have hidden this subtree while a model was pending; mesh-level
-    // visibility is owned by SceneSync, so the container itself must always be visible.
-    root.visible = true;
-    const registered: [string, THREE.Mesh][] = [];
-    root.traverse((o) => {
-      const mesh = o as THREE.Mesh;
-      if (mesh.isMesh && mesh.userData.meshId) {
-        meshRegistry.register(mesh.userData.meshId, mesh);
-        registered.push([mesh.userData.meshId, mesh]);
-      }
-    });
-    useViewer.getState().setModelState(model.id, 'ready');
-    invalidate();
-    return () => {
-      for (const [id, mesh] of registered) meshRegistry.unregister(id, mesh);
-    };
-  }, [root, model.id, invalidate]);
 
   // Leaving the laboratory: free GPU/CPU memory held by this model. Disposal is deferred so a
   // quick remount (React StrictMode, fast navigation back) reuses the cached asset instead.
@@ -108,6 +76,52 @@ export function GltfModel({ model, meshInfo, library, hover, onPick }: Props) {
     };
   }, [root, model.url, model.id]);
 
+  return <ModelScene root={root} modelId={model.id} library={library} hover={hover} onPick={onPick} />;
+}
+
+/** Assigns the shared material and picking data to one catalog mesh. */
+export function prepareMesh(mesh: THREE.Mesh, id: string, meshInfo: Map<string, CatalogMesh>, library: MaterialLibrary) {
+  const info = meshInfo.get(id);
+  const group = info?.group ?? 'outros';
+  const mat = library.get(group, info?.material ?? 'default');
+  mesh.name = id;
+  mesh.userData.meshId = id;
+  mesh.userData.group = group;
+  mesh.userData.base = mat;
+  mesh.material = mat;
+  if (!mesh.geometry.boundsTree) mesh.geometry.computeBoundsTree();
+  mesh.matrixAutoUpdate = false;
+  mesh.updateMatrix();
+}
+
+/**
+ * Registers the meshes of a prepared scene, marks the model ready and
+ * forwards pointer interaction (click to select, throttled hover).
+ */
+export function ModelScene({ root, modelId, library, hover, onPick }: { root: THREE.Object3D; modelId: string; library: MaterialLibrary; hover: boolean; onPick: (meshId: string, point: THREE.Vector3) => void }) {
+  const setHover = useViewer((s) => s.hover);
+  const invalidate = useThree((s) => s.invalidate);
+  const lastHover = useRef(0);
+
+  useEffect(() => {
+    // A Suspense boundary may have hidden this subtree while a model was pending; mesh-level
+    // visibility is owned by SceneSync, so the container itself must always be visible.
+    root.visible = true;
+    const registered: [string, THREE.Mesh][] = [];
+    root.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (mesh.isMesh && mesh.userData.meshId) {
+        meshRegistry.register(mesh.userData.meshId, mesh);
+        registered.push([mesh.userData.meshId, mesh]);
+      }
+    });
+    useViewer.getState().setModelState(modelId, 'ready');
+    invalidate();
+    return () => {
+      for (const [id, mesh] of registered) meshRegistry.unregister(id, mesh);
+    };
+  }, [root, modelId, invalidate]);
+
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
     if (e.delta > 6) return; // was a drag/orbit, not a click
     e.stopPropagation();
@@ -135,7 +149,6 @@ export function GltfModel({ model, meshInfo, library, hover, onPick }: Props) {
     />
   );
 }
-
 
 /**
  * Chooses what a click refers to: the nearest visible, non-ghosted mesh that is

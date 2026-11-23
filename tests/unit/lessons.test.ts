@@ -11,7 +11,7 @@ import { HUMAN_PROCESSES } from '@/laboratories/human/processes';
 
 const raw = JSON.parse(readFileSync(path.join(__dirname, '../../public/models/human/v1/catalog.json'), 'utf8')) as RawHumanCatalog;
 const human = buildHumanIndex(raw);
-const humanGroups = new Set(raw.groups.map((g) => g.id));
+const humanGroups = new Set(human.raw.groups.map((g) => g.id));
 
 describe('lesson scripts', () => {
   it('have unique ids and complete content', () => {
