@@ -10,7 +10,7 @@ Regra do projeto: o BioLab 3D é um produto pago, então **nenhum recurso com cl
 | Corpo humano (8 GLBs em `public/models/human/v1/`) | Z-Anatomy, `Startup.blend` do repositório `Z-Anatomy/Models-of-human-anatomy` | CC BY-SA 4.0 | Sim | Atribuição; derivados sob a mesma licença |
 | Geometria de base do Z-Anatomy | BodyParts3D (DBCLS) | CC BY-SA 2.1 JP | Sim | Atribuição; mesma licença |
 | Tabela de traduções (nomes em pt/la/en) | Z-Anatomy (`translations`) | CC BY-SA 4.0 | Sim | Idem |
-| Imagens `hero-anatomia.webp`, `card-anatomia.webp` | Renderizadas por nós a partir dos GLBs acima | CC BY-SA 4.0 (derivado) | Sim | Idem |
+| Imagem `card-anatomia.webp` (também na página de entrada) e `hero-anatomia.webp` (não usada) | Renderizadas por nós a partir dos GLBs acima | CC BY-SA 4.0 (derivado) | Sim | Idem |
 | Células animal, vegetal e procariótica; mitocôndria, cloroplasto e mitose (`laboratories/cells/`) | Geometria procedural escrita pelo BioLab 3D (nenhum arquivo de terceiros) | Própria | Sim | Nenhuma |
 | Imagem `card-celulas.webp` | Renderizada por nós a partir do modelo procedural | Própria | Sim | Nenhuma |
 | Plantas: planta com flores, flor, semente e germinação, cortes de folha, caule e raiz (`laboratories/plants/`) | Geometria procedural escrita pelo BioLab 3D (nenhum arquivo de terceiros) | Própria | Sim | Nenhuma |
