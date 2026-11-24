@@ -28,12 +28,13 @@ await render('hero-anatomia', { width: 760, height: 1000 }, () => {
   c.setLookAt(1.25, 1.05, 3.1, 0, 0.9, 0, false);
   window.__biolab.three().invalidate();
 });
-await render('card-anatomia', { width: 640, height: 400 }, () => {
+// card: head to upper chest, landscape (it is shown with object-cover)
+await render('card-corpo-humano', { width: 640, height: 400 }, () => {
   const v = window.__biolab.viewer.getState();
   v.setGroupVisible('vasos', true);
   v.setLabels(false);
   const c = window.__biolab.three().controls;
-  c.setLookAt(0.55, 1.35, 1.25, 0, 1.3, 0, false);
+  c.setLookAt(0.34, 1.62, 1.02, 0, 1.525, 0, false);
   window.__biolab.three().invalidate();
 });
 await b.close();

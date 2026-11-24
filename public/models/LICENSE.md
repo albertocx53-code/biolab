@@ -10,5 +10,5 @@ simplificação de geometria, remoção de materiais, compressão Draco e tradu�
 português. Estes arquivos derivados são distribuídos sob **CC BY-SA 4.0**
 (https://creativecommons.org/licenses/by-sa/4.0/).
 
-As imagens `public/images/hero-anatomia.webp` e `card-anatomia.webp` são renderizações destes
+As imagens `public/images/hero-anatomia.webp` e `card-corpo-humano.webp` são renderizações destes
 modelos e seguem a mesma licença.

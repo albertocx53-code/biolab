@@ -5,7 +5,7 @@ import { LabArt } from '@/components/dashboard/LabArt';
 import { LABORATORIES } from '@/data/biology/laboratories';
 
 const CARD_IMAGE: Partial<Record<string, { src: string; alt: string; position: string }>> = {
-  'anatomia-humana': { src: '/images/card-anatomia.webp', alt: 'Modelo 3D do corpo humano com esqueleto e órgãos', position: 'object-[center_35%]' },
+  'anatomia-humana': { src: '/images/card-corpo-humano.webp', alt: 'Modelo 3D da cabeça e do tórax com músculos e vasos', position: 'object-[center_30%]' },
   celulas: { src: '/images/card-celulas.webp', alt: 'Modelo 3D de célula animal em corte, com núcleo e organelas', position: 'object-center' },
   plantas: { src: '/images/card-plantas.webp', alt: 'Modelo 3D de planta com flor, folhas, fruto aberto e raízes', position: 'object-center' },
 };
