@@ -4,6 +4,7 @@ import { HUMAN_LESSONS } from './human';
 import { PLANT_LESSONS } from './plants';
 import { GENETICS_LESSONS } from './genetics';
 import { MICROBE_LESSONS } from './microbes';
+import { ANIMAL_LESSONS } from './animals';
 import type { Lesson } from './types';
 
 export type { Lesson, LessonAction, LessonSection } from './types';
@@ -24,6 +25,11 @@ export const LESSON_REFS: Record<string, { title: string; publisher: string; url
   'bio-22': ref('Biology 2e, cap. 22 — Procariontes', 'biology-2e/pages/22-introduction'),
   'bio-23': ref('Biology 2e, cap. 23 — Protistas', 'biology-2e/pages/23-introduction'),
   'bio-24': ref('Biology 2e, cap. 24 — Fungos', 'biology-2e/pages/24-introduction'),
+  'bio-27': ref('Biology 2e, cap. 27 — Introdução à diversidade animal', 'biology-2e/pages/27-introduction'),
+  'bio-28': ref('Biology 2e, cap. 28 — Invertebrados', 'biology-2e/pages/28-introduction'),
+  'bio-29': ref('Biology 2e, cap. 29 — Vertebrados', 'biology-2e/pages/29-introduction'),
+  'bio-40': ref('Biology 2e, cap. 40 — O sistema circulatório', 'biology-2e/pages/40-introduction'),
+  'bio-43': ref('Biology 2e, cap. 43 — Reprodução e desenvolvimento animal', 'biology-2e/pages/43-introduction'),
   'bio-26': ref('Biology 2e, cap. 26 — Plantas com sementes', 'biology-2e/pages/26-introduction'),
   'bio-30': ref('Biology 2e, cap. 30 — Forma e fisiologia das plantas', 'biology-2e/pages/30-introduction'),
   'bio-31': ref('Biology 2e, cap. 31 — Nutrição do solo e das plantas', 'biology-2e/pages/31-introduction'),
@@ -48,7 +54,7 @@ function ref(title: string, path: string) {
   return { title, publisher: 'OpenStax (Rice University)', url: `https://openstax.org/books/${path}`, license: 'CC BY 4.0' };
 }
 
-export const LESSONS: Lesson[] = [...CELL_LESSONS, ...HUMAN_LESSONS, ...PLANT_LESSONS, ...GENETICS_LESSONS, ...MICROBE_LESSONS];
+export const LESSONS: Lesson[] = [...CELL_LESSONS, ...HUMAN_LESSONS, ...PLANT_LESSONS, ...GENETICS_LESSONS, ...MICROBE_LESSONS, ...ANIMAL_LESSONS];
 
 export function lessonsFor(lab: LaboratoryId): Lesson[] {
   return LESSONS.filter((l) => l.laboratoryId === lab);

@@ -12,6 +12,7 @@
 | OpenStax *Biology 2e* (caps. 8, 30 e 32) | CC BY 4.0 | Base dos textos do laboratório de Plantas e das animações (reescritos em pt-BR) |
 | OpenStax *Biology 2e* (caps. 12 a 15) | CC BY 4.0 | Base dos textos do laboratório de Genética, das animações e de 6 roteiros de aula (reescritos em pt-BR) |
 | OpenStax *Biology 2e* (caps. 21 a 24) e *Microbiology* (11.6 e 14.5) | CC BY 4.0 | Base dos textos do laboratório de Microrganismos, das animações e de 6 roteiros de aula (reescritos em pt-BR) |
+| OpenStax *Biology 2e* (caps. 27 a 29, 40.1, 43.6 e 43.7) | CC BY 4.0 | Base dos textos do laboratório de Animais, das animações e de 6 roteiros de aula (reescritos em pt-BR) |
 
 Nenhum texto foi copiado da Wikipédia.
 

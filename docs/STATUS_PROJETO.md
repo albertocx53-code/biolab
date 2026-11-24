@@ -31,7 +31,7 @@ Atualizado em 24/11/2026 — **escolha de corpo masculino ou feminino** (mamas, 
 
 | Item | Situação |
 |---|---|
-| Laboratório de Animais | Fundação pronta; próximo a ser construído |
+| Laboratório de Animais | ✅ 13 modelos procedurais (esponja, hidra, planária, minhoca, gafanhoto, estrela-do-mar, peixe, sapo, ave, corações comparados, embrião, metamorfoses do sapo e da borboleta), 6 processos animados, chave dicotômica, tabela comparativa, árvore filogenética e 6 roteiros de aula |
 | Células: transporte ativo/endocitose animados | Próxima etapa do laboratório |
 | Geradores do Studio | Fase 2; a interface não os anuncia como funcionais |
 | Orelha interna | Excluída por licença (ver MODEL_LICENSES.md) |
@@ -44,5 +44,5 @@ Atualizado em 24/11/2026 — **escolha de corpo masculino ou feminino** (mamas, 
 
 1. Revisão pedagógica dos textos do corpo humano.
 2. Banco de dados + checkout para começar a vender.
-3. Laboratório de Animais, reutilizando o motor procedural (cenas com poses animadas em `laboratories/shared/PoseView.tsx`).
+3. Todos os laboratórios planejados estão prontos; próximo passo é revisão pedagógica e testes em sala de aula.
 4. Orelha interna modelada pelo projeto; no corpo feminino, adaptar também o esqueleto e o contorno (pelve mais larga, quadris).

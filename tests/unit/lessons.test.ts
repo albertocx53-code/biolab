@@ -10,6 +10,8 @@ import { GENETICS_CATALOG } from '@/laboratories/genetics/catalog';
 import { GENETICS_PROCESSES } from '@/laboratories/genetics/processes';
 import { MICROBE_CATALOG } from '@/laboratories/microbes/catalog';
 import { MICROBE_PROCESSES } from '@/laboratories/microbes/processes';
+import { ANIMAL_CATALOG } from '@/laboratories/animals/catalog';
+import { ANIMAL_PROCESSES } from '@/laboratories/animals/processes';
 import { buildHumanIndex, type RawHumanCatalog } from '@/laboratories/human/catalog';
 import { HUMAN_PROCESSES } from '@/laboratories/human/processes';
 
@@ -33,6 +35,7 @@ describe('lesson scripts', () => {
     expect(lessonsFor('plantas').length).toBeGreaterThanOrEqual(2);
     expect(lessonsFor('genetica').length).toBeGreaterThanOrEqual(6);
     expect(lessonsFor('microrganismos').length).toBeGreaterThanOrEqual(6);
+    expect(lessonsFor('animais').length).toBeGreaterThanOrEqual(6);
   });
 
   it('only point at structures, models and processes that exist in each laboratory', () => {
@@ -50,6 +53,12 @@ describe('lesson scripts', () => {
             if (a.model) expect(MICROBE_CATALOG.model(a.model), where).toBeDefined();
             if (a.process) expect(MICROBE_PROCESSES[a.process], where).toBeDefined();
             if (a.tool) expect(['escala', 'comparar', 'crescimento'], where).toContain(a.tool);
+            expect(a.group, where).toBeUndefined();
+          } else if (l.laboratoryId === 'animais') {
+            if (a.structure) expect(ANIMAL_CATALOG.content[a.structure], where).toBeDefined();
+            if (a.model) expect(ANIMAL_CATALOG.model(a.model), where).toBeDefined();
+            if (a.process) expect(ANIMAL_PROCESSES[a.process], where).toBeDefined();
+            if (a.tool) expect(['chave', 'comparar', 'arvore'], where).toContain(a.tool);
             expect(a.group, where).toBeUndefined();
           } else if (l.laboratoryId === 'genetica') {
             if (a.structure) expect(GENETICS_CATALOG.content[a.structure], where).toBeDefined();

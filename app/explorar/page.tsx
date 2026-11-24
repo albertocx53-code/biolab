@@ -19,6 +19,7 @@ const CARD_IMAGE: Partial<Record<string, { src: string; alt: string; position: s
   plantas: { src: '/images/card-plantas.webp', alt: 'Modelo 3D de planta com flor, folhas, fruto aberto e raízes', position: 'object-center' },
   genetica: { src: '/images/card-genetica.webp', alt: 'Modelo 3D do DNA se enrolando em nucleossomos, fibra de cromatina e cromossomo', position: 'object-center' },
   microrganismos: { src: '/images/card-microrganismos.webp', alt: 'Modelo 3D de coronavírus em corte, com espículas, envelope e RNA', position: 'object-center' },
+  animais: { src: '/images/card-animais.webp', alt: 'Modelo 3D de peixe com a pele translúcida mostrando brânquias, coração, bexiga natatória e coluna vertebral', position: 'object-center' },
 };
 
 const STATUS_LABEL = {
