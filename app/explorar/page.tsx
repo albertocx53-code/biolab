@@ -45,8 +45,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             </Link>
           </nav>
           <div className="ml-auto flex items-center gap-3">
-            <span className="chip">{TIER_LABEL[session.tier]}</span>
-            <LogoutButton />
+            <span className="chip">{session.open ? 'Acesso livre' : TIER_LABEL[session.tier]}</span>
+            {!session.open && <LogoutButton />}
           </div>
         </div>
       </header>

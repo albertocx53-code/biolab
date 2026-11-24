@@ -11,6 +11,7 @@ const PUBLIC_API = ['/api/access', '/api/access/logout'];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+  if (authConfig.openAccess) return NextResponse.next(); // no access keys: everything is open
   const token = req.cookies.get(authConfig.sessionCookie)?.value;
   const session = await verifySession(token, authConfig.sessionSecret);
 

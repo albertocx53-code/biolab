@@ -20,6 +20,13 @@ function read(name: string): string {
 }
 
 export const authConfig = {
+  /**
+   * Open access (default): anyone enters without an access key and gets every
+   * feature. Set BIOLAB_REQUIRE_KEY=1 to bring back the access keys and plans.
+   */
+  get openAccess() {
+    return process.env.BIOLAB_REQUIRE_KEY !== '1';
+  },
   get sessionSecret() {
     return read('BIOLAB_SESSION_SECRET');
   },

@@ -7,12 +7,7 @@ test('painel mostra os seis laboratórios com status honesto', async ({ page }) 
   const cards = page.locator('[data-testid^=lab-card-]');
   await expect(cards).toHaveCount(6);
   for (const t of ['Corpo Humano', 'Plantas', 'Animais', 'Células', 'Genética', 'Microrganismos']) await expect(page.getByRole('heading', { name: t })).toBeVisible();
-  await expect(page.getByTestId('lab-card-corpo-humano')).toContainText('Disponível');
-  await expect(page.getByTestId('lab-card-celulas')).toContainText('Disponível');
-  await expect(page.getByTestId('lab-card-plantas')).toContainText('Disponível');
-  await expect(page.getByTestId('lab-card-animais')).toContainText('Em breve');
-  await page.getByTestId('lab-card-animais').click();
-  await expect(page.getByText('Este laboratório está em desenvolvimento')).toBeVisible();
+  for (const slug of ['corpo-humano', 'celulas', 'plantas', 'animais', 'genetica', 'microrganismos']) await expect(page.getByTestId(`lab-card-${slug}`)).toContainText('Disponível');
 });
 
 test('Plano Básico não acessa o Studio', async ({ page }) => {

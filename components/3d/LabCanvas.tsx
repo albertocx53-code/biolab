@@ -3,7 +3,7 @@
 import { Canvas } from '@react-three/fiber';
 import { AdaptiveDpr, Environment, Lightformer, PerformanceMonitor } from '@react-three/drei';
 import { EffectComposer, N8AO } from '@react-three/postprocessing';
-import { Suspense, useEffect, useState, type ReactNode } from 'react';
+import { Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import * as THREE from 'three';
 import { QUALITY } from '@/engine/performance/quality';
 import { useViewer } from '@/engine/store';
@@ -32,6 +32,18 @@ export function LabCanvas({ children, cameraPreset, onPointerMissed, onContextLo
 
   useEffect(() => setDprCap(q.dpr[1]), [q.dpr]);
 
+  // A quality change that toggles antialiasing replaces the canvas; React Three Fiber then
+  // forces a context loss on the old one. Only the current canvas may report a real loss.
+  const canvasId = `${canvasKey}-${q.antialias}`;
+  const liveCanvas = useRef(canvasId);
+  liveCanvas.current = canvasId;
+  useEffect(() => {
+    liveCanvas.current = canvasId;
+    return () => {
+      liveCanvas.current = ''; // lab closed: nothing left to recover
+    };
+  });
+
   if (lost) {
     return (
       <div className="grid h-full w-full place-items-center p-6 text-center">
@@ -54,7 +66,7 @@ export function LabCanvas({ children, cameraPreset, onPointerMissed, onContextLo
 
   return (
     <Canvas
-      key={`${canvasKey}-${q.antialias}`}
+      key={canvasId}
       dpr={[q.dpr[0], dprCap]}
       gl={{ antialias: q.antialias && !q.ao, powerPreference: 'high-performance', alpha: true, preserveDrawingBuffer: false }}
       camera={{ fov: 32, near: 0.01, far: 50, position: cameraPreset.position }}
@@ -63,12 +75,14 @@ export function LabCanvas({ children, cameraPreset, onPointerMissed, onContextLo
         if ((e as MouseEvent).button === 0) onPointerMissed?.();
       }}
       onCreated={({ gl }) => {
+        const createdAs = canvasId;
         gl.toneMapping = THREE.ACESFilmicToneMapping;
         gl.localClippingEnabled = true; // per-material cut-aways (e.g. the heart)
         gl.toneMappingExposure = 1.0;
         gl.setClearColor(0x000000, 0); // transparent: the CSS studio backdrop shows through
         const canvas = gl.domElement;
         canvas.addEventListener('webglcontextlost', (ev) => {
+          if (liveCanvas.current !== createdAs) return; // old canvas being disposed
           ev.preventDefault();
           setLost(true);
           onContextLost?.();

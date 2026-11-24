@@ -10,6 +10,8 @@ export const E2E_ENV = {
   BIOLAB_SESSION_SECRET: 'e2e-only-session-secret-0123456789abcdefghij',
   BIOLAB_KEY_PEPPER: 'e2e-only-key-pepper-0123456789abcdefghijklmn',
   BIOLAB_KEYSTORE_PATH: '.data/e2e-keys.json',
+  // the suite covers access keys and plans; open access is the production default
+  BIOLAB_REQUIRE_KEY: '1',
 };
 
 export default defineConfig({

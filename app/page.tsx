@@ -1,4 +1,7 @@
 import Image from 'next/image';
+import Link from 'next/link';
+import { Icon } from '@/components/ui/Icon';
+import { authConfig } from '@/lib/auth/config';
 import { Logo } from '@/components/ui/Logo';
 import { AccessForm } from '@/components/access/AccessForm';
 import { LabArt } from '@/components/dashboard/LabArt';
@@ -15,6 +18,7 @@ const CARD_IMAGE: Partial<Record<string, { src: string; alt: string; position: s
 
 export default async function AccessPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const sp = await searchParams;
+  const open = authConfig.openAccess;
   return (
     <main className="relative grid min-h-dvh lg:grid-cols-[minmax(420px,520px)_1fr]">
       <section className="relative z-10 flex flex-col justify-between bg-ink-850 px-6 py-8 sm:px-12 lg:border-r lg:border-line">
@@ -26,16 +30,32 @@ export default async function AccessPage({ searchParams }: { searchParams: Promi
           </h1>
           <p className="mt-4 text-lg text-fg-muted">A Biologia ganha vida na sua aula.</p>
           <div className="mt-10">
-            <AccessForm expired={sp.expirada === '1'} />
+            {open ? (
+              <Link href="/explorar" className="btn btn-primary h-12 w-full text-[15px]" data-testid="enter-open">
+                Entrar na plataforma <Icon name="arrowRight" size={18} />
+              </Link>
+            ) : (
+              <AccessForm expired={sp.expirada === '1'} />
+            )}
           </div>
           <ul className="mt-10 grid gap-3 text-sm text-fg-muted">
-            <li className="flex gap-3"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan" />Sem cadastro e sem senha: sua chave é o seu acesso.</li>
-            <li className="flex gap-3"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan" />Plano Básico: os seis laboratórios 3D e o Modo Apresentação.</li>
-            <li className="flex gap-3"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan" />Plano Completo: tudo do Básico e o BioLab 3D Studio (geradores em desenvolvimento).</li>
+            {open ? (
+              <>
+                <li className="flex gap-3"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan" />Acesso livre: sem cadastro, sem senha e sem chave.</li>
+                <li className="flex gap-3"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan" />Os seis laboratórios 3D e o Modo Apresentação.</li>
+                <li className="flex gap-3"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan" />BioLab 3D Studio para criar materiais de aula.</li>
+              </>
+            ) : (
+              <>
+                <li className="flex gap-3"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan" />Sem cadastro e sem senha: sua chave é o seu acesso.</li>
+                <li className="flex gap-3"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan" />Plano Básico: os seis laboratórios 3D e o Modo Apresentação.</li>
+                <li className="flex gap-3"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan" />Plano Completo: tudo do Básico e o BioLab 3D Studio (geradores em desenvolvimento).</li>
+              </>
+            )}
           </ul>
         </div>
         <footer className="text-xs text-fg-subtle">
-          Precisa de ajuda com sua chave? Responda ao e-mail de compra que nossa equipe atende você.
+          {open ? 'Precisa de ajuda? Responda ao e-mail de compra que nossa equipe atende você.' : 'Precisa de ajuda com sua chave? Responda ao e-mail de compra que nossa equipe atende você.'}
         </footer>
       </section>
       <section className="lab-backdrop relative hidden overflow-hidden lg:flex lg:flex-col lg:justify-center" aria-label="Os seis laboratórios">
