@@ -8,6 +8,7 @@ import HumanLabLoader from '@/laboratories/human/HumanLabLoader';
 import CellLabLoader from '@/laboratories/cells/CellLabLoader';
 import PlantLabLoader from '@/laboratories/plants/PlantLabLoader';
 import GeneticsLabLoader from '@/laboratories/genetics/GeneticsLabLoader';
+import MicrobeLabLoader from '@/laboratories/microbes/MicrobeLabLoader';
 import { LabArt } from '@/components/dashboard/LabArt';
 import { Logo } from '@/components/ui/Logo';
 import { Icon } from '@/components/ui/Icon';
@@ -33,6 +34,9 @@ export default async function LabPage({ params }: { params: Promise<{ lab: strin
     return <CellLabLoader canUseStudio={can(session.tier, 'studio.access')} tierLabel={TIER_LABEL[session.tier]} />;
   }
 
+  if (lab.id === 'microrganismos') {
+    return <MicrobeLabLoader canUseStudio={can(session.tier, 'studio.access')} tierLabel={TIER_LABEL[session.tier]} />;
+  }
   if (lab.id === 'genetica') {
     return <GeneticsLabLoader canUseStudio={can(session.tier, 'studio.access')} tierLabel={TIER_LABEL[session.tier]} />;
   }

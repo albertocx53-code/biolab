@@ -3,6 +3,7 @@ import { CELL_LESSONS } from './cells';
 import { HUMAN_LESSONS } from './human';
 import { PLANT_LESSONS } from './plants';
 import { GENETICS_LESSONS } from './genetics';
+import { MICROBE_LESSONS } from './microbes';
 import type { Lesson } from './types';
 
 export type { Lesson, LessonAction, LessonSection } from './types';
@@ -21,6 +22,8 @@ export const LESSON_REFS: Record<string, { title: string; publisher: string; url
   'bio-15': ref('Biology 2e, cap. 15 — Genes e proteínas', 'biology-2e/pages/15-introduction'),
   'bio-21': ref('Biology 2e, cap. 21 — Vírus', 'biology-2e/pages/21-introduction'),
   'bio-22': ref('Biology 2e, cap. 22 — Procariontes', 'biology-2e/pages/22-introduction'),
+  'bio-23': ref('Biology 2e, cap. 23 — Protistas', 'biology-2e/pages/23-introduction'),
+  'bio-24': ref('Biology 2e, cap. 24 — Fungos', 'biology-2e/pages/24-introduction'),
   'bio-26': ref('Biology 2e, cap. 26 — Plantas com sementes', 'biology-2e/pages/26-introduction'),
   'bio-30': ref('Biology 2e, cap. 30 — Forma e fisiologia das plantas', 'biology-2e/pages/30-introduction'),
   'bio-31': ref('Biology 2e, cap. 31 — Nutrição do solo e das plantas', 'biology-2e/pages/31-introduction'),
@@ -45,7 +48,7 @@ function ref(title: string, path: string) {
   return { title, publisher: 'OpenStax (Rice University)', url: `https://openstax.org/books/${path}`, license: 'CC BY 4.0' };
 }
 
-export const LESSONS: Lesson[] = [...CELL_LESSONS, ...HUMAN_LESSONS, ...PLANT_LESSONS, ...GENETICS_LESSONS];
+export const LESSONS: Lesson[] = [...CELL_LESSONS, ...HUMAN_LESSONS, ...PLANT_LESSONS, ...GENETICS_LESSONS, ...MICROBE_LESSONS];
 
 export function lessonsFor(lab: LaboratoryId): Lesson[] {
   return LESSONS.filter((l) => l.laboratoryId === lab);

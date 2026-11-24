@@ -86,12 +86,12 @@ export const LABORATORIES: Laboratory[] = [
     title: 'Microrganismos',
     category: 'Microbiologia',
     cta: 'Explorar microrganismos',
-    summary: 'Bactérias, vírus, fungos e protozoários, distinguindo vírus de organismos celulares.',
-    status: 'planejado',
-    phase: 7,
+    summary: 'Bactérias, bacteriófago, coronavírus, levedura, bolor, cogumelo, ameba, paramécio e euglena em 3D, com ciclos virais, conjugação, resistência a antibióticos, brotamento e fagocitose animados.',
+    status: 'disponivel',
+    phase: 6,
     accent: '#A3E635',
-    plannedContent: ['Bactérias', 'Vírus', 'Fungos', 'Protozoários'],
-    plannedProcesses: ['Fissão binária', 'Crescimento bacteriano', 'Ciclos de replicação viral', 'Reprodução de fungos', 'Interações parasita-hospedeiro'],
+    plannedContent: ['Bactérias', 'Vírus', 'Fungos', 'Protozoários', 'Algas unicelulares'],
+    plannedProcesses: ['Ciclo lítico', 'Ciclo lisogênico', 'Conjugação', 'Resistência a antibióticos', 'Brotamento', 'Fagocitose', 'Crescimento bacteriano'],
   },
 ];
 

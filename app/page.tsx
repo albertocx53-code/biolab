@@ -9,6 +9,7 @@ const CARD_IMAGE: Partial<Record<string, { src: string; alt: string; position: s
   celulas: { src: '/images/card-celulas.webp', alt: 'Modelo 3D de célula animal em corte, com núcleo e organelas', position: 'object-center' },
   plantas: { src: '/images/card-plantas.webp', alt: 'Modelo 3D de planta com flor, folhas, fruto aberto e raízes', position: 'object-center' },
   genetica: { src: '/images/card-genetica.webp', alt: 'Modelo 3D do DNA se enrolando em nucleossomos, fibra de cromatina e cromossomo', position: 'object-center' },
+  microrganismos: { src: '/images/card-microrganismos.webp', alt: 'Modelo 3D de coronavírus em corte, com espículas, envelope e RNA', position: 'object-center' },
 };
 
 export default async function AccessPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
