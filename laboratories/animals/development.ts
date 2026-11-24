@@ -10,6 +10,8 @@ import { presetFor, type BuiltModel, type MeshDef } from '@/laboratories/shared/
 import { ac, fibSphere, lathe, latheCutFaces, limb, loft, organ, paintDorsal, plate, smooth, V, type Profile } from './kit';
 import { colorize } from './materials';
 import { frogExterior } from './frog';
+import { fbm, mix, pw, surface, sweep, vcolor } from './sculpt';
+import { butterflyBody, butterflyWing, caterpillar, chrysalis, eggs, leaf, leafY, twig } from './butterfly';
 
 type Get = (id: string) => THREE.Object3D | undefined;
 const show = (o: THREE.Object3D | undefined, s: number) => o && o.scale.setScalar(Math.max(0.0001, s));
@@ -23,15 +25,56 @@ const CUTS = [PHI0, PHI0 + PHI_LEN];
 
 const R = 2.2;
 const H = 0.34;
-const ANIMAL = '#C08552';
-const VEGETAL = '#F6E7C1';
+const ANIMAL = '#4A3426';
+const VEGETAL = '#EADBB4';
 
 function cell(r: number, at: THREE.Vector3) {
-  const g = new THREE.SphereGeometry(r, 26, 18);
+  const g = new THREE.SphereGeometry(r, 40, 28);
   place(g, at);
   return g;
 }
-const shadeEgg = (g: THREE.BufferGeometry) => paintDorsal(g, ANIMAL, VEGETAL, -1.2, 1.6);
+/** Amphibian egg colours: dark pigmented animal pole, pale yolky vegetal pole, fine mottling. */
+const shadeEgg = (g: THREE.BufferGeometry) =>
+  vcolor(g, (p) => {
+    const k = smooth((p.y + 0.9) / 2.2);
+    const c = mix(VEGETAL, ANIMAL, k);
+    return c.multiplyScalar(0.93 + 0.12 * fbm(p, 3, 3));
+  });
+/** Blastomeres pressed together inside the fertilization envelope: the outside rounds off, furrows stay between cells. */
+function compact(g: THREE.BufferGeometry, rMax: number) {
+  const pos = g.getAttribute('position');
+  const q = new THREE.Vector3();
+  for (let i = 0; i < pos.count; i++) {
+    q.fromBufferAttribute(pos, i);
+    const l = q.length();
+    if (l > rMax) q.multiplyScalar((rMax + (l - rMax) * 0.18) / l);
+    pos.setXYZ(i, q.x, q.y, q.z);
+  }
+  g.computeVertexNormals();
+  return g;
+}
+/** Cell mosaic on a germ-layer surface: each cell a slightly different shade, with darker membranes between them. */
+const MOSAIC = fibSphere(150, 1);
+function mosaic(g: THREE.BufferGeometry, color: string) {
+  const base = new THREE.Color(color);
+  return vcolor(g, (p) => {
+    const d = p.clone().normalize();
+    let b1 = -2;
+    let b2 = -2;
+    let i1 = 0;
+    for (let i = 0; i < MOSAIC.length; i++) {
+      const v = MOSAIC[i].dot(d);
+      if (v > b1) {
+        b2 = b1;
+        b1 = v;
+        i1 = i;
+      } else if (v > b2) b2 = v;
+    }
+    const edge = 1 - smooth((b1 - b2) / 0.035);
+    const shade = 0.9 + 0.16 * (((i1 * 2654435761) >>> 0) % 1000) / 1000;
+    return base.clone().multiplyScalar(shade * (1 - 0.35 * edge));
+  });
+}
 
 /** Gastrula wall for invagination depth d (0..1): ectoderm arc and endoderm (archenteron) band. */
 function gastrulaLine(d: number) {
@@ -79,24 +122,40 @@ function band(line: [number, number][], w: number) {
 
 function bandMesh(line: [number, number][], w: number, color: string) {
   const { a, b } = band(line, w);
-  return paint(merge([lathe(a, 64, PHI0, PHI_LEN), lathe(b, 64, PHI0, PHI_LEN), latheCutFaces(a, b, CUTS)]), color);
+  return paint(merge([lathe(a, 128, PHI0, PHI_LEN), lathe(b, 128, PHI0, PHI_LEN), latheCutFaces(a, b, CUTS)]), color);
 }
 
 export const GASTRULA_DEPTHS = [0.15, 0.4, 0.7, 1];
 
 function embryo(): BuiltModel {
   const meshes: MeshDef[] = [];
-  meshes.push({ id: 'em-zigoto', structure: 'zigoto', geometry: merge([shadeEgg(cell(R, V(0, 0, 0))), paint(cell(0.3, V(0.4, 1.0, 1.95)), '#7F5539')]) });
+  const zyg = shadeEgg(cell(R, V(0, 0, 0)));
+  {
+    // grey crescent opposite the sperm entry point, and the entry point itself
+    const col = zyg.getAttribute('color');
+    const pos = zyg.getAttribute('position');
+    const q = new THREE.Vector3();
+    const entry = V(0.4, 1.0, 1.95).normalize();
+    for (let i = 0; i < pos.count; i++) {
+      q.fromBufferAttribute(pos, i).normalize();
+      const c = new THREE.Color(col.getX(i), col.getY(i), col.getZ(i));
+      const crescent = Math.exp(-((q.y - 0.05) ** 2) / 0.02) * smooth((-q.z * 0.8 - q.x * 0.6 + 0.2) / 0.5);
+      c.lerp(new THREE.Color('#8C8272'), crescent * 0.7);
+      c.lerp(new THREE.Color('#1E140E'), Math.exp(-q.distanceToSquared(entry) / 0.004));
+      col.setXYZ(i, c.r, c.g, c.b);
+    }
+  }
+  meshes.push({ id: 'em-zigoto', structure: 'zigoto', geometry: zyg });
   // cleavage: 2, 4 and 8 cells (amphibian: smaller cells at the animal pole)
-  meshes.push({ id: 'em-c2', structure: 'blastomeros', geometry: shadeEgg(merge([cell(1.6, V(-1.0, 0, 0)), cell(1.6, V(1.0, 0, 0))])) });
-  meshes.push({ id: 'em-c4', structure: 'blastomeros', geometry: shadeEgg(merge([-1, 1].flatMap((x) => [-1, 1].map((z) => cell(1.25, V(x * 0.85, 0, z * 0.85)))))) });
+  meshes.push({ id: 'em-c2', structure: 'blastomeros', geometry: shadeEgg(compact(merge([cell(1.6, V(-1.0, 0, 0)), cell(1.6, V(1.0, 0, 0))]), R)) });
+  meshes.push({ id: 'em-c4', structure: 'blastomeros', geometry: shadeEgg(compact(merge([-1, 1].flatMap((x) => [-1, 1].map((z) => cell(1.3, V(x * 0.85, 0, z * 0.85))))), R)) });
   meshes.push({
     id: 'em-c8',
     structure: 'blastomeros',
-    geometry: shadeEgg(merge([-1, 1].flatMap((x) => [-1, 1].flatMap((z) => [cell(0.92, V(x * 0.78, 0.95, z * 0.78)), cell(1.12, V(x * 0.85, -0.75, z * 0.85))])))),
+    geometry: shadeEgg(compact(merge([-1, 1].flatMap((x) => [-1, 1].flatMap((z) => [cell(0.98, V(x * 0.78, 0.95, z * 0.78)), cell(1.2, V(x * 0.85, -0.75, z * 0.85))]))), R)),
   });
-  const mor = [...fibSphere(28, 1.6), ...fibSphere(6, 0.6)];
-  meshes.push({ id: 'em-morula', structure: 'morula', geometry: shadeEgg(merge(mor.map((p, i) => cell(0.62 + (i % 3) * 0.04, p)))) });
+  const mor = [...fibSphere(36, 1.6), ...fibSphere(8, 0.7)];
+  meshes.push({ id: 'em-morula', structure: 'morula', geometry: shadeEgg(compact(merge(mor.map((p, i) => cell((p.y > 0 ? 0.6 : 0.72) + (i % 3) * 0.04, p))), R)) });
   // blastula: one layer of cells around a cavity, cut open
   const bl: THREE.BufferGeometry[] = [];
   for (const p of fibSphere(240, R - 0.15)) {
@@ -118,8 +177,8 @@ function embryo(): BuiltModel {
   // gastrula at four invagination depths
   GASTRULA_DEPTHS.forEach((d, k) => {
     const g = gastrulaLine(d);
-    meshes.push({ id: `em-ecto-${k}`, structure: 'ectoderme', geometry: bandMesh(g.ecto, H, ac('ectoderme')) });
-    meshes.push({ id: `em-endo-${k}`, structure: 'endoderme', geometry: bandMesh(g.endo, H, ac('endoderme')) });
+    meshes.push({ id: `em-ecto-${k}`, structure: 'ectoderme', geometry: mosaic(bandMesh(g.ecto, H, ac('ectoderme')), ac('ectoderme')) });
+    meshes.push({ id: `em-endo-${k}`, structure: 'endoderme', geometry: mosaic(bandMesh(g.endo, H, ac('endoderme')), ac('endoderme')) });
     const lum: Profile = [[0.001, g.lip[1] + 0.1]];
     for (let i = 0; i <= 10; i++) lum.push([g.ra - H / 2 - 0.02, g.lip[1] + 0.25 + (i / 10) * (g.yTop - g.lip[1] - 0.25)]);
     lum.push([0.001, g.yTop + g.ra - H / 2]);
@@ -167,17 +226,126 @@ export function poseEmbryo(P: number, get: Get) {
 
 const EGGS_AT = V(0, -0.6, 0);
 
+/** Tadpole skin: olive-brown back with gold flecks, bronze-white belly. */
+function tadpoleSkin(p: THREE.Vector3, n: THREE.Vector3) {
+  const back = smooth((n.y + 0.25) / 0.7);
+  const c = mix('#D8CDB0', '#3C3A26', back);
+  c.lerp(new THREE.Color('#1F1E14'), back * smooth((fbm(p, 4, 3) - 0.55) / 0.1) * 0.7);
+  c.lerp(new THREE.Color('#C9A64A'), back * smooth((fbm(p.clone().addScalar(5), 16, 1) - 0.74) / 0.05) * 0.85);
+  return c;
+}
+
 function tadpoleTail() {
-  // pivot at x = 0 (joins the body), tail along −X
-  const g = loft(-3.4, 0, (t) => ({ y: 0, ry: 0.06 + 0.42 * Math.pow(t, 0.7), rz: 0.04 + 0.2 * Math.pow(t, 0.9) }), 40, 20);
-  const fin = plate([[0, 0.35], [-1.2, 0.75], [-3.3, 0.15], [-3.45, 0], [-3.3, -0.15], [-1.2, -0.7], [0, -0.3]], 0.03);
-  return paintDorsal(merge([g, fin]), '#3D405B', '#9A8C98', -0.7, 0.7);
+  // pivot at x = 0 (joins the body), tail along −X: muscular axis with dorsal and ventral fins
+  const muscle = sweep([V(0.45, 0, 0), V(-1.5, 0.02, 0), V(-3.4, 0.06, 0)], (t) => ({ a: 0.36 * Math.pow(1 - t, 0.8) + 0.015, b: 0.24 * Math.pow(1 - t, 1.1) + 0.012 }), { rings: 90, radial: 20 });
+  vcolor(muscle, (p, n) => {
+    const c = tadpoleSkin(p, n);
+    // chevron muscle blocks (myomeres)
+    const ch = Math.abs(Math.sin((p.x + Math.abs(p.y) * 1.2) * 9));
+    return c.multiplyScalar(0.9 + 0.12 * ch);
+  });
+  const finH = (s: number, top: boolean) => (top ? 0.62 : 0.42) * pw(s, [[0, 0], [0.12, 0.35], [0.4, 1], [0.75, 0.75], [1, 0]]);
+  const fin = (top: boolean) =>
+    surface((u, v) => {
+      const x = -0.2 - u * 3.3;
+      const base = (top ? 1 : -1) * (0.36 * Math.pow(Math.max(0, 1 - (0.1 - x) / 3.5), 0.8) * 0.6);
+      return V(x, 0.04 + base + (top ? 1 : -1) * v * finH(u, top), 0.03 * Math.sin(u * 9) * v);
+    }, 70, 14);
+  const fins = merge([fin(true), fin(false)].map((g) =>
+    vcolor(g, (p, _n, u, v) => {
+      const c = mix('#8F8A66', '#C9C3A0', v);
+      c.lerp(new THREE.Color('#2E2C1E'), smooth((fbm(p, 6, 2) - 0.6) / 0.08) * 0.6);
+      return c.lerp(new THREE.Color('#E6E0C8'), smooth((v - 0.92) / 0.08) * 0.5 * (1 - u * 0.3));
+    }),
+  ));
+  muscle.deleteAttribute('uv');
+  return merge([muscle, fins]);
+}
+
+function tadpoleBody() {
+  const g = sweep([V(-0.45, 0, 0), V(0.7, 0.03, 0), V(2.05, -0.05, 0)], (t) => {
+    const k = pw(t, [[0, 0.45], [0.15, 0.85], [0.45, 1], [0.8, 0.86], [1, 0.4]]);
+    return { a: 0.66 * k, b: 0.8 * k, off: -0.04 * k };
+  }, { rings: 90, radial: 40 });
+  vcolor(g, (p, n) => {
+    const c = tadpoleSkin(p, n);
+    // the coiled gut shows through the belly
+    const belly = smooth((-n.y - 0.5) / 0.3);
+    const r = Math.hypot(p.x - 0.55, p.z);
+    c.lerp(new THREE.Color('#8E7E5A'), belly * Math.pow(Math.abs(Math.sin(r * 22)), 6) * 0.5 * (r < 0.6 ? 1 : 0));
+    return c;
+  });
+  g.deleteAttribute('uv');
+  const parts: THREE.BufferGeometry[] = [g];
+  for (const s of [1, -1]) {
+    // dorsolateral eyes: gold iris, black pupil
+    const eye = new THREE.SphereGeometry(0.15, 20, 14);
+    vcolor(eye, (p) => {
+      const d = Math.hypot(p.y, p.z * s > 0 ? p.x : p.x) / 0.15;
+      return p.z * s > 0.06 && d < 0.55 ? new THREE.Color('#0D0D0D') : p.z * s > 0.02 ? new THREE.Color('#B8913A') : new THREE.Color('#2A2A20');
+    });
+    eye.deleteAttribute('uv');
+    parts.push(place(eye, [1.5, 0.3, s * 0.5]));
+    parts.push(paint(place(new THREE.SphereGeometry(0.03, 8, 6), [1.97, 0.12, s * 0.16]), '#111111'));
+  }
+  // oral disc with dark horny jaws, and the spiracle on the left side
+  parts.push(paint(place(new THREE.TorusGeometry(0.13, 0.04, 8, 24).rotateY(Math.PI / 2).scale(1, 0.7, 1.2), [1.98, -0.18, 0]), '#5A4E3A'));
+  parts.push(paint(place(new THREE.SphereGeometry(0.07, 10, 8).scale(0.4, 0.6, 1.4), [2.02, -0.18, 0]), '#151515'));
+  parts.push(paint(sweep([V(0.35, -0.15, 0.6), V(0.15, -0.17, 0.72)], () => ({ a: 0.05, b: 0.05 }), { rings: 6, radial: 10 }), '#4A4632'));
+  for (const q of parts) if (q.getAttribute('uv')) q.deleteAttribute('uv');
+  return merge(parts);
+}
+
+/** Feathery external gills: three branches per side, each with fine filaments. */
+function tadpoleGills() {
+  const parts: THREE.BufferGeometry[] = [];
+  for (const s of [1, -1])
+    for (let k = 0; k < 3; k++) {
+      const base = V(0.95 - k * 0.14, 0.12 - k * 0.12, s * 0.7);
+      const tip = base.clone().add(V(-0.55, 0.28 - k * 0.14, s * 0.5));
+      const mid = base.clone().lerp(tip, 0.5).add(V(0, 0.1, s * 0.05));
+      parts.push(sweep([base, mid, tip], (t) => ({ a: 0.05 * (1 - 0.6 * t), b: 0.05 * (1 - 0.6 * t) }), { rings: 16, radial: 8 }));
+      const c = new THREE.CatmullRomCurve3([base, mid, tip]);
+      for (let j = 1; j < 9; j++) {
+        const p = c.getPoint(j / 9);
+        for (const side of [1, -1]) {
+          const end = p.clone().add(V(-0.1, side * (0.13 - j * 0.008), s * 0.04));
+          parts.push(sweep([p, p.clone().lerp(end, 0.5).add(V(-0.02, 0, 0)), end], () => ({ a: 0.018, b: 0.018 }), { rings: 6, radial: 5 }));
+        }
+      }
+    }
+  for (const q of parts) q.deleteAttribute('uv');
+  return vcolor(merge(parts), (p) => mix('#C9575A', '#F0A3A0', fbm(p, 8, 1)));
+}
+
+/** A developing leg: thigh, shank and foot with webbed toes, coloured like the skin. */
+function tadpoleLeg(pts: THREE.Vector3[], r: number, toes: number, s: number, spread: number) {
+  const parts: THREE.BufferGeometry[] = [sweep(pts, (t) => ({ a: r * (1 - 0.45 * t), b: r * (1 - 0.45 * t) }), { rings: 30, radial: 12 })];
+  const end = pts[pts.length - 1];
+  const dir = end.clone().sub(pts[pts.length - 2]).normalize();
+  const tipPts: THREE.Vector3[] = [];
+  for (let k = 0; k < toes; k++) {
+    const a = (k / (toes - 1) - 0.5) * spread;
+    const d = dir.clone().applyAxisAngle(V(0, 1, 0), a * s).add(V(0, -0.15, 0)).normalize();
+    const tip = end.clone().addScaledVector(d, 0.32 + 0.08 * Math.sin((k / (toes - 1)) * Math.PI));
+    tipPts.push(tip);
+    parts.push(sweep([end, end.clone().lerp(tip, 0.5), tip], (t) => ({ a: r * 0.3 * (1 - 0.3 * t), b: r * 0.3 * (1 - 0.3 * t) }), { rings: 8, radial: 6 }));
+  }
+  for (const q of parts) q.deleteAttribute('uv');
+  return vcolor(merge(parts), (p, n) => tadpoleSkin(p, n));
 }
 
 function frogMeta(): BuiltModel {
   const r = rng(31);
   const meshes: MeshDef[] = [];
-  meshes.push({ id: 'mf-agua', structure: 'agua', geometry: place(new THREE.CylinderGeometry(2.7, 2.7, 0.06, 72), [0, -1.9, 0]) });
+  const pond = surface((u, v) => {
+    const r = 3.4 * v;
+    const a = u * Math.PI * 2;
+    return V(Math.cos(a) * r * 1.15, -1.9 + 0.035 * Math.sin(r * 7) * Math.exp(-r * 0.4), Math.sin(a) * r);
+  }, 96, 40);
+  vcolor(pond, (p, _n, _u, v) => mix('#3E8FA8', '#9FD6E0', v * 0.8 + 0.2 * fbm(p, 1.5, 2)));
+  pond.deleteAttribute('uv');
+  meshes.push({ id: 'mf-agua', structure: 'agua', geometry: pond });
   // egg mass: dark eggs inside jelly capsules
   const jelly: THREE.Vector3[] = [];
   for (let i = 0; i < 400 && jelly.length < 46; i++) {
@@ -188,28 +356,14 @@ function frogMeta(): BuiltModel {
   meshes.push({ id: 'mf-gel', structure: 'massa-gelatinosa', geometry: dots(jelly, 0.31, 2) });
   meshes.push({ id: 'mf-ovos', structure: 'ovos', geometry: paintDorsal(merge(jelly.map((p) => place(new THREE.SphereGeometry(0.13, 12, 8), p))), '#1B1B1E', '#D9C6A5', -0.1, 0.1) });
   // tadpole (built at the origin, head towards +X)
-  const body = paintDorsal(loft(-0.3, 1.9, (t) => ({ y: 0, ry: 0.72 * Math.pow(Math.sin(Math.PI * Math.min(1, 0.08 + t * 0.92)), 0.6), rz: 0.8 * Math.pow(Math.sin(Math.PI * Math.min(1, 0.08 + t * 0.92)), 0.6) }), 40, 28), '#3D405B', '#C9ADA7', -0.6, 0.6);
-  const eyes = merge([organ(0.13, 0.13, 0.1, [1.45, 0.25, 0.55], '#111111'), organ(0.13, 0.13, 0.1, [1.45, 0.25, -0.55], '#111111')]);
-  meshes.push({ id: 'mf-girino', structure: 'girino', geometry: merge([body, eyes]) });
+  meshes.push({ id: 'mf-girino', structure: 'girino', geometry: tadpoleBody() });
   meshes.push({ id: 'mf-cauda', structure: 'cauda', geometry: tadpoleTail() });
-  const gills: THREE.BufferGeometry[] = [];
-  for (const s of [1, -1])
-    for (let k = 0; k < 3; k++) {
-      const base = V(0.85 - k * 0.12, 0.15 - k * 0.12, s * 0.72);
-      const tip = base.clone().add(V(-0.45, 0.25 - k * 0.12, s * 0.45));
-      gills.push(tube([base, base.clone().lerp(tip, 0.5).add(V(0, 0.08, 0)), tip], 0.045, false, 10, 5));
-      for (let j = 1; j < 5; j++) {
-        const p = base.clone().lerp(tip, j / 5);
-        gills.push(tube([p, p.clone().add(V(-0.12, 0.15, s * 0.05))], 0.025, false, 3, 4), tube([p, p.clone().add(V(-0.12, -0.12, s * 0.05))], 0.025, false, 3, 4));
-      }
-    }
-  meshes.push({ id: 'mf-branquias', structure: 'branquias-externas', geometry: paint(merge(gills), ac('branquias-externas')) });
+  meshes.push({ id: 'mf-branquias', structure: 'branquias-externas', geometry: tadpoleGills() });
   const hind: THREE.BufferGeometry[] = [];
   const front: THREE.BufferGeometry[] = [];
   for (const s of [1, -1]) {
-    hind.push(limb([V(-0.15, -0.35, s * 0.4), V(-0.55, -0.6, s * 0.85), V(-0.15, -0.8, s * 1.05), V(-0.75, -0.9, s * 1.25)], 0.12, 0.06, '#4A4E69'));
-    front.push(limb([V(1.05, -0.35, s * 0.6), V(1.3, -0.85, s * 1.0), V(1.75, -1.1, s * 1.08)], 0.1, 0.065, '#4A4E69'));
-    for (let k = 0; k < 4; k++) front.push(limb([V(1.75, -1.1, s * 1.08), V(2.0 + k * 0.02, -1.15, s * (0.9 + k * 0.12))], 0.03, 0.025, '#4A4E69'));
+    hind.push(tadpoleLeg([V(-0.1, -0.3, s * 0.45), V(-0.5, -0.55, s * 0.9), V(-0.15, -0.78, s * 1.05), V(-0.6, -0.9, s * 1.2)], 0.13, 5, s, 1.1));
+    front.push(tadpoleLeg([V(1.05, -0.3, s * 0.62), V(1.3, -0.75, s * 0.98), V(1.65, -1.0, s * 1.05)], 0.1, 4, s, 0.9));
   }
   meshes.push({ id: 'mf-patas-tras', structure: 'patas-traseiras', geometry: merge(hind) });
   meshes.push({ id: 'mf-patas-diant', structure: 'patas-dianteiras', geometry: merge(front) });
@@ -258,90 +412,16 @@ export function poseFrogMeta(P: number, get: Get) {
 
 const TWIG_Y = 3.1;
 
-function wing(side: 1 | -1) {
-  // forewing and hindwing in the XZ plane, hinged on the X axis, extending to side·Z
-  const fw = plate([[0.15, 0], [1.3, 1.1], [1.5, 2.35], [0.2, 2.6], [-0.55, 1.5], [-0.2, 0.2]], 0.03, 16);
-  const hw = plate([[-0.05, 0], [0.1, 1.1], [-0.6, 1.9], [-1.5, 1.6], [-1.35, 0.6], [-0.45, 0.05]], 0.03, 16);
-  const g = merge([fw, hw]);
-  g.rotateX(Math.PI / 2);
-  // shape y → +z after the rotation; mirror for the right wing
-  if (side === -1) g.scale(1, 1, -1);
-  const p = g.getAttribute('position');
-  const col = new Float32Array(p.count * 3);
-  const orange = new THREE.Color(ac('borboleta'));
-  const black = new THREE.Color('#1D1D1D');
-  const white = new THREE.Color('#FFFFFF');
-  for (let i = 0; i < p.count; i++) {
-    const x = p.getX(i);
-    const z = Math.abs(p.getZ(i));
-    const edge = (x > 0 ? Math.hypot((x - 0.3) / 1.3, (z - 1.2) / 1.45) : Math.hypot((x + 0.65) / 0.95, (z - 0.9) / 1.05)) > 0.82;
-    const vein = Math.abs(Math.sin(Math.atan2(z, x - 0.1) * 9)) < 0.12 && z > 0.3;
-    const c = edge ? (Math.sin(x * 14) * Math.sin(z * 14) > 0.55 ? white : black) : vein ? black : orange;
-    col.set([c.r, c.g, c.b], i * 3);
-  }
-  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
-  return g;
-}
-
 function butterflyMeta(): BuiltModel {
   const meshes: MeshDef[] = [];
-  const leafOutline: [number, number][] = [];
-  for (let i = 0; i < 40; i++) {
-    const a = (i / 40) * Math.PI * 2;
-    leafOutline.push([Math.cos(a) * 4.2, Math.sin(a) * 1.9 * (1 - 0.25 * Math.cos(a))]);
-  }
-  const leafShape = new THREE.Shape(leafOutline.map(([x, y]) => new THREE.Vector2(x, y)));
-  const leaf = new THREE.ExtrudeGeometry(leafShape, { depth: 0.06, bevelEnabled: true, bevelThickness: 0.04, bevelSize: 0.04, bevelSegments: 2, curveSegments: 4 });
-  leaf.rotateX(-Math.PI / 2).deleteAttribute('uv');
-  leaf.translate(0, -1.6, 0.2);
-  const veins: THREE.BufferGeometry[] = [tube([V(-4.3, -1.5, 0.2), V(4.1, -1.5, 0.2)], 0.04, false, 8, 5)];
-  for (let x = -3; x <= 3; x += 1) for (const s of [1, -1]) veins.push(tube([V(x, -1.5, 0.2), V(x + 0.8, -1.5, 0.2 - s * 1.4)], 0.025, false, 4, 4));
-  meshes.push({ id: 'mb-folha', structure: 'folha-planta', geometry: merge([paint(leaf, ac('folha-planta')), paint(merge(veins), '#95D5B2')]) });
-  meshes.push({ id: 'mb-galho', structure: 'galho', geometry: tube([V(-5, TWIG_Y + 0.2, -0.6), V(0, TWIG_Y, -0.5), V(5, TWIG_Y + 0.35, -0.4)], 0.13, false, 30, 10) });
-  const eggs: THREE.BufferGeometry[] = [];
-  for (let i = 0; i < 6; i++) {
-    const e = new THREE.SphereGeometry(0.09, 14, 10);
-    e.scale(1, 1.35, 1);
-    eggs.push(place(e, [-2.4 + (i % 3) * 0.32, -1.38, 0.1 + Math.floor(i / 3) * 0.32]));
-  }
-  meshes.push({ id: 'mb-ovos', structure: 'ovo-inseto', geometry: merge(eggs) });
-  // caterpillar along X at the origin, head at +X, striped
-  const cat: THREE.BufferGeometry[] = [];
-  for (let i = 0; i < 12; i++) {
-    const x = -1.65 + i * 0.3;
-    const r = 0.27 + 0.04 * Math.sin((i / 11) * Math.PI);
-    const seg = new THREE.SphereGeometry(r, 16, 12);
-    place(seg, [x, 0, 0]);
-    paint(seg, i === 11 ? '#1D3557' : i % 2 ? ac('lagarta') : '#F1FAEE');
-    cat.push(seg);
-    if (i > 1 && i < 10) for (const s of [1, -1]) cat.push(paint(place(new THREE.CylinderGeometry(0.05, 0.06, 0.18, 6), [x, -0.27, s * 0.15]), '#2B2D42'));
-  }
-  cat.push(paint(tube([V(1.75, 0.2, 0.08), V(1.95, 0.5, 0.15)], 0.02, false, 4, 4), '#1D1D1D'), paint(tube([V(1.75, 0.2, -0.08), V(1.95, 0.5, -0.15)], 0.02, false, 4, 4), '#1D1D1D'));
-  meshes.push({ id: 'mb-lagarta', structure: 'lagarta', geometry: merge(cat) });
-  // chrysalis hanging from the twig (pivot at the top)
-  const pupa: Profile = [];
-  for (let i = 0; i <= 24; i++) {
-    const s = i / 24;
-    pupa.push([0.48 * Math.pow(Math.sin(Math.PI * s), 0.8) * (1 - 0.3 * s), -s * 2.0]);
-  }
-  const pupaG = new THREE.LatheGeometry(pupa.map(([x, y]) => new THREE.Vector2(Math.max(0.001, x), y)), 32);
-  paintDorsal(pupaG, '#B5C99A', '#718355', -2.0, 0);
-  const gold: THREE.Vector3[] = [];
-  for (let k = 0; k < 8; k++) gold.push(V(Math.sin(k * 0.8) * 0.42, -0.75, Math.cos(k * 0.8) * 0.42));
-  meshes.push({ id: 'mb-pupa', structure: 'pupa', geometry: merge([pupaG, paint(dots(gold, 0.04, 1), '#E9C46A'), paint(place(new THREE.CylinderGeometry(0.04, 0.04, 0.25, 6), [0, 0.1, 0]), '#2B2D42')]) });
-  // butterfly: body at the origin, wings hinged on the body axis
-  const body = merge([
-    organ(0.75, 0.13, 0.13, [-0.55, 0, 0], '#2B2D42'),
-    organ(0.35, 0.18, 0.18, [0.3, 0, 0], '#2B2D42'),
-    organ(0.15, 0.15, 0.15, [0.75, 0.02, 0], '#2B2D42'),
-    paint(tube([V(0.85, 0.08, 0.06), V(1.4, 0.4, 0.35), V(1.75, 0.55, 0.5)], 0.02, false, 8, 4), '#2B2D42'),
-    paint(tube([V(0.85, 0.08, -0.06), V(1.4, 0.4, -0.35), V(1.75, 0.55, -0.5)], 0.02, false, 8, 4), '#2B2D42'),
-    organ(0.06, 0.06, 0.06, [1.75, 0.55, 0.5], '#2B2D42'),
-    organ(0.06, 0.06, 0.06, [1.75, 0.55, -0.5], '#2B2D42'),
-  ]);
-  meshes.push({ id: 'mb-corpo', structure: 'borboleta', geometry: body });
-  meshes.push({ id: 'mb-asa-e', structure: 'borboleta', geometry: wing(1) });
-  meshes.push({ id: 'mb-asa-d', structure: 'borboleta', geometry: wing(-1) });
+  meshes.push({ id: 'mb-folha', structure: 'folha-planta', geometry: leaf() });
+  meshes.push({ id: 'mb-galho', structure: 'galho', geometry: twig(TWIG_Y) });
+  meshes.push({ id: 'mb-ovos', structure: 'ovo-inseto', geometry: eggs() });
+  meshes.push({ id: 'mb-lagarta', structure: 'lagarta', geometry: caterpillar() });
+  meshes.push({ id: 'mb-pupa', structure: 'pupa', geometry: chrysalis() });
+  meshes.push({ id: 'mb-corpo', structure: 'borboleta', geometry: butterflyBody() });
+  meshes.push({ id: 'mb-asa-e', structure: 'borboleta', geometry: butterflyWing(1) });
+  meshes.push({ id: 'mb-asa-d', structure: 'borboleta', geometry: butterflyWing(-1) });
   return { meshes: colorize(meshes), anchors: {}, preset: presetFor(15, [0.5, 0.6, 0], 0.25, 0.4) };
 }
 
@@ -354,7 +434,7 @@ export function poseButterfly(P: number, get: Get) {
   if (cat) {
     const grow = step === 1 ? 0.35 + 0.65 * smooth(t) : step === 2 ? 1 - smooth(t * 1.4) : 0;
     const x = step === 1 ? -2.2 + 3.0 * smooth(t) : 0.8;
-    cat.position.set(x, -1.1 + 0.22 * grow + Math.abs(Math.sin(P * 10)) * 0.05 * (step === 1 ? 1 : 0), 0.3);
+    cat.position.set(x, leafY(x, 0.3) + 0.42 * grow + Math.abs(Math.sin(P * 10)) * 0.04 * (step === 1 ? 1 : 0), 0.3);
     cat.rotation.set(0, 0, 0);
     show(cat, step === 0 ? 0 : grow);
   }
@@ -367,9 +447,11 @@ export function poseButterfly(P: number, get: Get) {
   const adult = step === 4 ? 0.35 + 0.65 * smooth(t * 1.8) : 0;
   const open = step === 4 ? smooth((t - 0.45) * 2.2) : 0;
   const flap = step === 4 && t > 0.8 ? Math.sin((t - 0.8) * 30) * 0.25 : 0;
-  const a = 1.45 - 1.25 * open + flap;
-  const at = V(0.4, TWIG_Y - 2.0 + 0.8 * open, -0.5);
-  for (const [id, rx] of [['mb-corpo', 0], ['mb-asa-e', -a], ['mb-asa-d', a]] as const) {
+  const a = 1.45 - 1.15 * open + flap;
+  // once the wings are dry it turns its back to the viewer, showing the upper side of the wings
+  const tilt = 1.05 * open;
+  const at = V(0.4 + 0.3 * open, TWIG_Y - 2.0 - 0.15 * open, -0.5 + 1.6 * open);
+  for (const [id, rx] of [['mb-corpo', tilt], ['mb-asa-e', tilt - a], ['mb-asa-d', tilt + a]] as const) {
     const o = get(id);
     if (!o) continue;
     o.position.copy(at);
