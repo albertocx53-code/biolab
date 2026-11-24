@@ -1,6 +1,6 @@
 # Status do projeto
 
-Atualizado em 23/11/2026 — **rins, encéfalo e sistema reprodutor feminino modelados pelo BioLab**; antes: células orgânicas, coração/circulação, meiose, fissão binária e roteiros de aula.
+Atualizado em 24/11/2026 — **escolha de corpo masculino ou feminino** (mamas, vulva e pele da região púbica modeladas pelo BioLab); antes: rins, encéfalo e sistema reprodutor feminino; antes: células orgânicas, coração/circulação, meiose, fissão binária e roteiros de aula.
 
 ## Pronto e testado
 
@@ -20,7 +20,7 @@ Atualizado em 23/11/2026 — **rins, encéfalo e sistema reprodutor feminino mod
 | Células: mitocôndria e cloroplasto em detalhe, mitose em 6 fases, meiose em 9 fases com crossing-over, fissão binária em 4 etapas | ✅ |
 | Células: animações de síntese de proteínas, respiração (célula e mitocôndria), fotossíntese (célula e cloroplasto), osmose e flagelos peritríquios girando | ✅ |
 | Corpo humano: vasos visíveis por padrão, vista "Coração e circulação", corte coronal do coração (valvas e músculos papilares), animações do caminho do sangue e do ciclo cardíaco, seleção que mantém a cor do órgão | ✅ |
-| Corpo humano: rins (córtex, pirâmides, pelve e cálices) com corte frontal; encéfalo (4 lobos com giros, cerebelo, mesencéfalo, ponte, bulbo, corpo caloso, tálamo, hipotálamo, ventrículos) com corte mediano; sistema reprodutor feminino (útero, colo, tubas com fímbrias, ovários, vagina) alternando com o masculino. Geometria própria em `laboratories/human/organs.ts` | ✅ |
+| Corpo humano: rins (córtex, pirâmides, pelve e cálices) com corte frontal; encéfalo (4 lobos com giros, cerebelo, mesencéfalo, ponte, bulbo, corpo caloso, tálamo, hipotálamo, ventrículos) com corte mediano; seletor "Corpo: masculino / feminino": o corpo feminino troca os órgãos genitais e reprodutores, recorta a genitália masculina da pele e acrescenta monte do púbis e grandes lábios, vulva (pequenos lábios e clitóris), mamas com aréola, papila, lobos da glândula mamária e ductos lactíferos, além do sistema reprodutor feminino interno (útero, colo, tubas com fímbrias, ovários, vagina). Geometria própria em `laboratories/human/organs.ts` | ✅ |
 | Roteiros de aula (painel "Aulas"): 11 de citologia, 9 de corpo humano, 3 de plantas, com objetivos, botões que controlam o 3D, termos-chave, perguntas e erros comuns | ✅ (texto pendente de revisão pedagógica) |
 | Laboratório de Plantas: planta com flores, flor em corte, semente, folha, caule e raiz em corte, com ~55 estruturas clicáveis | ✅ |
 | Plantas: animações de transporte de seiva, transpiração, fotossíntese (planta e folha), estômatos, absorção pela raiz, seiva no caule, polinização, fecundação e germinação | ✅ |
@@ -43,4 +43,4 @@ Atualizado em 23/11/2026 — **rins, encéfalo e sistema reprodutor feminino mod
 1. Revisão pedagógica dos textos do corpo humano.
 2. Banco de dados + checkout para começar a vender.
 3. Laboratório de Genética ou de Animais, reutilizando o motor procedural de Células e Plantas.
-4. Orelha interna modelada pelo projeto; detalhar mamas e órgãos externos femininos.
+4. Orelha interna modelada pelo projeto; no corpo feminino, adaptar também o esqueleto e o contorno (pelve mais larga, quadris).

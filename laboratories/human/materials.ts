@@ -7,6 +7,7 @@ import type { MaterialSpec } from '@/engine/visibility/materials';
 const ORGAN = { roughness: 0.42, clearcoat: 0.35, clearcoatRoughness: 0.4 };
 export const HUMAN_MATERIALS: Record<string, MaterialSpec> = {
   pele: { color: '#D9A88A', roughness: 0.58, sheen: 0.6, sheenColor: '#F6D2BE', polygonOffset: true },
+  'pele-genital': { color: '#D9A88A', roughness: 0.58, sheen: 0.6, sheenColor: '#F6D2BE', polygonOffset: true },
   osso: { color: '#EAE0CC', roughness: 0.55, clearcoat: 0.08 },
   dente: { color: '#F6F2E8', roughness: 0.25, clearcoat: 0.6 },
   cartilagem: { color: '#C7DCE4', roughness: 0.35, clearcoat: 0.45 },
@@ -56,5 +57,8 @@ export const HUMAN_MATERIALS: Record<string, MaterialSpec> = {
   'tuba-uterina': { color: '#E39AA0', ...ORGAN },
   ovario: { color: '#EAC8B0', ...ORGAN, organic: { noise: 0.2, scale: 300, rim: 0.2, rimColor: '#FFF1E6', rimPower: 3 } },
   vagina: { color: '#D98C95', ...ORGAN },
+  vulva: { color: '#C9727C', ...ORGAN },
+  'glandula-mamaria': { color: '#E7A9A0', ...ORGAN, organic: { noise: 0.15, scale: 220, rim: 0.2, rimColor: '#FFE6E0', rimPower: 3 } },
+  areola: { color: '#A8665A', roughness: 0.55, sheen: 0.5, sheenColor: '#E8B9A8', polygonOffset: true },
 };
 export const HUMAN_FALLBACK: MaterialSpec = { color: '#C8CED6', roughness: 0.55 };

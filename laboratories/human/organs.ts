@@ -444,7 +444,7 @@ function buildFemale(out: Map<string, THREE.BufferGeometry>) {
   // vagina: from the cervix downwards and forwards to the vestibule
   out.set(
     'vagina',
-    tubeAlong([cervixEnd.clone().add(new THREE.Vector3(0, 0.004, -0.002)), new THREE.Vector3(0, 0.845, -0.03), new THREE.Vector3(0, 0.815, -0.012), new THREE.Vector3(0, 0.79, 0.006)], (t) => 0.0085 + 0.0015 * t, 40, 18),
+    tubeAlong([cervixEnd.clone().add(new THREE.Vector3(0, 0.004, -0.002)), new THREE.Vector3(0, 0.835, -0.034), new THREE.Vector3(0, 0.79, -0.008), new THREE.Vector3(0, 0.752, 0.024)], (t) => 0.0085 + 0.0015 * t, 40, 18),
   );
 
   // left ovary and uterine tube (the right side is the mirror image)
@@ -479,12 +479,154 @@ function buildFemale(out: Map<string, THREE.BufferGeometry>) {
   out.set('tuba-uterina-dir', mirrorX(tubeGeo));
 }
 
+// ---------------------------------------------------------------- female external anatomy and breasts
+
+const smin = (a: number, b: number, k: number) => {
+  const h = Math.max(k - Math.abs(a - b), 0) / k;
+  return Math.min(a, b) - (h * h * k) / 4;
+};
+/** Signed-distance-like value of an ellipsoid (negative inside). */
+const ell = (p: THREE.Vector3, c: THREE.Vector3, r: [number, number, number]) => Math.hypot((p.x - c.x) / r[0], (p.y - c.y) / r[1], (p.z - c.z) / r[2]) - 1;
+
+/** Where the breasts sit (from the catalog skin: nipple line y ≈ 1.25, chest wall z ≈ 0.12). */
+export const FEMALE_LANDMARKS = {
+  breastLeft: new THREE.Vector3(0.095, 1.25, 0.1),
+};
+
+const ss = THREE.MathUtils.smoothstep;
+
+/** Front of the catalog skin of the groin and inner thigh next to the genital region (|x| ≈ 0.04), measured on the model. */
+const GROIN_Z: [number, number][] = [
+  [0.69, 0.038], [0.71, 0.045], [0.75, 0.049], [0.78, 0.051], [0.8, 0.054], [0.82, 0.058], [0.835, 0.064], [0.85, 0.072],
+];
+function groinZ(y: number) {
+  if (y <= GROIN_Z[0][0]) return GROIN_Z[0][1];
+  for (let i = 1; i < GROIN_Z.length; i++) {
+    const [y1, z1] = GROIN_Z[i];
+    const [y0, z0] = GROIN_Z[i - 1];
+    if (y <= y1) return z0 + ((y - y0) / (y1 - y0)) * (z1 - z0);
+  }
+  return GROIN_Z[GROIN_Z.length - 1][1];
+}
+
+/**
+ * Front of the female pubic region (z as a function of x, y) for |x| <= 0.04:
+ * the mons pubis continuous with the belly at the top, the labia majora with the
+ * cleft between them, and the perineum between the thighs at the bottom. At
+ * |x| = 0.04 it meets the catalog skin of the groin.
+ */
+export function femalePubicZ(x: number, y: number) {
+  const ax = Math.abs(x);
+  const t = THREE.MathUtils.clamp((0.835 - y) / 0.13, 0, 1);
+  const mid = 0.086 - 0.098 * t ** 3;
+  // groin and inner thigh, rising to the side like the catalog skin
+  const side = groinZ(y) + 0.5 * (ax - 0.04);
+  // mons and labia: a rounded region that narrows downwards between the groin creases
+  const w = 0.022 + 0.03 * ss(y, 0.73, 0.83);
+  const u = Math.min(1, (ax / w) ** 2);
+  let z = side + (mid - side) * (1 - u) ** 2;
+  // the belly above: z ≈ 0.087 - 9x²
+  z += (0.085 - 9 * ax * ax - z) * ss(y, 0.815, 0.845);
+  // at the bottom the region narrows between the inner thighs (z ≈ -0.015 + 1.4|x| on the model)
+  z += (Math.max(mid, -0.016 + 1.4 * ax) - z) * (1 - ss(y, 0.715, 0.75));
+  const lips = ss(y, 0.72, 0.745) * (1 - ss(y, 0.785, 0.81));
+  z += 0.0015 * Math.exp(-(((ax - 0.008) / 0.006) ** 2)) * lips; // labia majora
+  z -= 0.0035 * Math.exp(-((x / 0.0025) ** 2)) * lips; // pudendal cleft
+  return z;
+}
+
+/**
+ * Box of the catalog skin taken by the male external genitalia: clipped away
+ * in the female body (where x, y, z are all inside it) and covered by 'pele-vulva'.
+ */
+export const MALE_GENITAL_BOX = { xMax: 0.034, yMin: 0.695, yMax: 0.83, zMin: 0.015 };
+
+/** Skin sheet of the female pubic region (femalePubicZ), tucked under the groin and belly skin at its borders. */
+function pubicSheet() {
+  const nx = 72;
+  const ny = 80;
+  const pos: number[] = [];
+  const idx: number[] = [];
+  for (let j = 0; j <= ny; j++) {
+    const y = 0.688 + (j / ny) * (0.848 - 0.688);
+    for (let i = 0; i <= nx; i++) {
+      const x = -0.052 + (i / nx) * 0.104;
+      const tuck = 0.025 * ss(Math.abs(x), 0.042, 0.054) + 0.006 * ss(y, 0.836, 0.848);
+      pos.push(x, y, femalePubicZ(x, y) - tuck);
+    }
+  }
+  const row = nx + 1;
+  for (let j = 0; j < ny; j++)
+    for (let i = 0; i < nx; i++) {
+      const a = j * row + i;
+      idx.push(a, a + 1, a + row, a + 1, a + row + 1, a + row);
+    }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  return g;
+}
+
+function buildFemaleExternal(out: Map<string, THREE.BufferGeometry>) {
+  // inner parts (reproductive layer), lying in the cleft of the female pubic skin (see femalePubicZ)
+  const parts: THREE.BufferGeometry[] = [];
+  for (const sx of [-1, 1]) {
+    const pts = [0.8, 0.785, 0.765, 0.745, 0.728].map((y) => new THREE.Vector3(sx * 0.0035, y, femalePubicZ(0, y) - 0.003));
+    parts.push(tubeAlong(pts, (t) => 0.0022 + 0.0018 * Math.sin(Math.PI * t), 24, 10));
+  }
+  parts.push(ellipsoidGeo([0.0032, 0.004, 0.0032], [16, 12]).translate(0, 0.805, femalePubicZ(0, 0.805) - 0.002)); // glans of the clitoris
+  out.set('vulva', mergeAll(parts));
+  out.set('pele-vulva', pubicSheet());
+
+  // breasts: skin mound with areola and nipple, and the mammary gland inside
+  const B = FEMALE_LANDMARKS.breastLeft;
+  // teardrop: gentle upper slope, fuller lower pole, slightly turned outwards
+  const mound: Implicit = (p) => {
+    const ry = p.y > 0 ? 0.085 : 0.052;
+    return Math.hypot(p.x / 0.064, p.y / ry, p.z / 0.056) - 1;
+  };
+  const skin = starSurface(mound, 0.12, [80, 64]).translate(B.x, B.y, B.z);
+  const nipDir = new THREE.Vector3(0.18, -0.12, 1).normalize();
+  const front = nipDir.clone().multiplyScalar(radiusAlong(mound, nipDir, 0.12)).add(B);
+  // areola: the patch of the mound around the nipple, lifted a hair above the skin
+  const areolaPatch = splitByLabel(skin.clone(), (c) => (c.clone().sub(B).normalize().dot(nipDir) > Math.cos(0.2) ? 'a' : 'b')).get('a')!;
+  areolaPatch.translate(-B.x, -B.y, -B.z).scale(1.004, 1.004, 1.004).translate(B.x, B.y, B.z);
+  const nipple = new THREE.CapsuleGeometry(0.0042, 0.004, 6, 14);
+  nipple.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), nipDir));
+  nipple.translate(front.x + nipDir.x * 0.002, front.y + nipDir.y * 0.002, front.z + nipDir.z * 0.002);
+  const areolaGeo = mergeAll([areolaPatch, nipple]);
+
+  // mammary gland: 15 lobes arranged around the nipple, each drained by a lactiferous duct
+  const gland: THREE.BufferGeometry[] = [];
+  for (let i = 0; i < 15; i++) {
+    const a = (i / 15) * Math.PI * 2;
+    const r = 0.03 + 0.007 * Math.sin(i * 2.7);
+    const lobe = new THREE.Vector3(B.x + Math.cos(a) * r * 1.05, B.y + Math.sin(a) * r * 0.95 - 0.006, B.z + 0.012 + 0.006 * Math.cos(i * 1.3));
+    for (let k = 0; k < 4; k++) {
+      const off = new THREE.Vector3(Math.cos(a + k) * 0.006, Math.sin(a * 1.7 + k) * 0.006, (k - 1.5) * 0.004);
+      gland.push(ellipsoidGeo([0.0075, 0.0075, 0.006], [12, 9]).translate(lobe.x + off.x, lobe.y + off.y, lobe.z + off.z));
+    }
+    const sinus = front.clone().add(new THREE.Vector3(Math.cos(a) * 0.006, Math.sin(a) * 0.006, -0.012));
+    gland.push(tubeAlong([lobe, lobe.clone().lerp(sinus, 0.6).add(new THREE.Vector3(0, 0, 0.008)), sinus, front.clone().add(new THREE.Vector3(0, 0, 0.002))], (t) => 0.0014 + 0.0014 * Math.sin(Math.PI * t * 0.9), 16, 6));
+  }
+  const glandGeo = mergeAll(gland);
+
+  out.set('pele-mama-esq', skin);
+  out.set('pele-mama-dir', mirrorX(skin));
+  out.set('areola-esq', areolaGeo);
+  out.set('areola-dir', mirrorX(areolaGeo));
+  out.set('glandula-mamaria-esq', glandGeo);
+  out.set('glandula-mamaria-dir', mirrorX(glandGeo));
+}
+
 /** Builds every extra organ, in body coordinates. Heavy (brain folds): call once per lab visit. */
 export function buildExtraOrgans(): Map<string, THREE.BufferGeometry> {
   const out = new Map<string, THREE.BufferGeometry>();
   buildKidneys(out);
   buildBrain(out);
   buildFemale(out);
+  buildFemaleExternal(out);
   return out;
 }
 

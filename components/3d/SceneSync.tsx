@@ -27,7 +27,7 @@ export function SceneSync({ library, meshesOf }: { library: MaterialLibrary; mes
       meshRegistry.forEach((id, mesh) => {
         const group = mesh.userData.group as string;
         const groupOn = s.groupVisible[group] ?? false;
-        const hidden = !!s.hiddenMeshIds[id];
+        const hidden = !!s.hiddenMeshIds[id] || !!s.excludedMeshIds[id];
         let visible = groupOn && !hidden;
         let mat: THREE.Material = mesh.userData.base;
         if (isolated) {

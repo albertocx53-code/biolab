@@ -25,7 +25,7 @@ componente em `laboratories/<lab>/`.
 - 148 nomes ainda sem tradução para o português (aparecem em inglês/latim).
 - Conteúdo curado para ~50 estruturas; as demais mostram nome, sistema e o aviso "em elaboração".
 - Processos animados de respiração e contração muscular (circulação e ciclo cardíaco já existem em `laboratories/human/CirculationLayer.tsx`).
-- Corpo feminino completo (pelve, mamas, órgãos externos): hoje só os órgãos reprodutores internos alternam com os masculinos.
+- Corpo feminino: mamas, vulva e órgãos internos já existem; falta adaptar pelve óssea, quadris e musculatura (hoje o contorno, os ossos e os músculos são os do modelo masculino).
 
 ## Motor procedural compartilhado
 

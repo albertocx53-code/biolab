@@ -6,7 +6,8 @@ import * as THREE from 'three';
 import { LabCanvas } from '@/components/3d/LabCanvas';
 import { GltfModel } from '@/components/3d/GltfModel';
 import { ProceduralOrgans } from './ProceduralOrgans';
-import { FEMALE_GROUP } from './extra-catalog';
+import { FEMALE_GROUP, FEMALE_SKIN } from './extra-catalog';
+import { MALE_GENITAL_BOX } from './organs';
 import { ModelSlot } from '@/components/3d/ModelSlot';
 import { SceneSync } from '@/components/3d/SceneSync';
 import { SelectionLabel } from '@/components/3d/SelectionLabel';
@@ -40,6 +41,24 @@ import { HUMAN_PROCESSES } from './processes';
 const CATALOG_URL = '/models/human/v1/catalog.json';
 
 type OrganCut = 'coracao' | 'rim' | 'encefalo';
+type BodySex = 'masculino' | 'feminino';
+const SEX_KEY = 'biolab.corpo';
+
+/** Planes of MALE_GENITAL_BOX; with clipIntersection only the inside of the box is removed. */
+const GENITAL_CLIP = [
+  new THREE.Plane(new THREE.Vector3(0, 0, -1), MALE_GENITAL_BOX.zMin), // z > zMin
+  new THREE.Plane(new THREE.Vector3(0, -1, 0), MALE_GENITAL_BOX.yMin), // y > yMin
+  new THREE.Plane(new THREE.Vector3(0, 1, 0), -MALE_GENITAL_BOX.yMax), // y < yMax
+  new THREE.Plane(new THREE.Vector3(1, 0, 0), -MALE_GENITAL_BOX.xMax), // x < xMax
+  new THREE.Plane(new THREE.Vector3(-1, 0, 0), -MALE_GENITAL_BOX.xMax), // x > -xMax
+];
+
+/** Meshes that only belong to one of the two bodies. */
+function sexSpecificMeshes(index: HumanIndex) {
+  const male = index.raw.meshes.filter((m) => m.g === 'reprodutor' || m.id === 'urethra' || /penis|testicular|external-pudendal/.test(m.id)).map((m) => m.id);
+  const female = index.raw.meshes.filter((m) => m.g === FEMALE_GROUP || FEMALE_SKIN.includes(m.id)).map((m) => m.id);
+  return { male, female };
+}
 
 /**
  * Clipping for each cut-away view. Planes clip where `n·p + d < 0`; with
@@ -93,6 +112,7 @@ export function HumanLab({ canUseStudio, tierLabel }: { canUseStudio: boolean; t
   const [layersOpen, setLayersOpen] = useState(false);
   const [depth, setDepth] = useState(DEFAULT_DEPTH);
   const [dark, setDark] = useState(false);
+  const [sex, setSex] = useState<BodySex>('masculino');
   /** Active cut-away view: heart (coronal), kidneys (coronal) or brain (mid-sagittal). */
   const [cut, setCut] = useState<OrganCut | null>(null);
   const [lessonsOpen, setLessonsOpen] = useState(false);
@@ -115,6 +135,7 @@ export function HumanLab({ canUseStudio, tierLabel }: { canUseStudio: boolean; t
     setWebgl(isWebGLAvailable());
     try {
       setDark(localStorage.getItem(THEME_KEY) === 'dark');
+      if (localStorage.getItem(SEX_KEY) === 'feminino') setSex('feminino');
     } catch {}
     const saved = loadSavedQuality();
     useViewer.getState().setQuality(saved ?? pickDefaultQuality(readDeviceSignals()));
@@ -155,23 +176,24 @@ export function HumanLab({ canUseStudio, tierLabel }: { canUseStudio: boolean; t
     };
   }, [cut, index, library]);
 
-  // ---- one reproductive system at a time: switching the female layer on hides the male one and vice versa
-  const lastRepro = useRef<{ m: boolean; f: boolean }>({ m: false, f: false });
+  // ---- body variant: the catalog body is male; the female body swaps the reproductive organs,
+  // the male-only vessels and urethra, and adds the female skin (breasts, vulva) modelled by BioLab
+  const sexMeshes = useMemo(() => (index ? sexSpecificMeshes(index) : null), [index]);
   useEffect(() => {
-    const m = !!s.groupVisible.reprodutor;
-    const f = !!s.groupVisible[FEMALE_GROUP];
-    const prev = lastRepro.current;
-    lastRepro.current = { m, f };
-    if (m && f) useViewer.getState().setGroupVisible(prev.f ? FEMALE_GROUP : 'reprodutor', false);
-    // the catalog's urethra is the long male one: hide it while the female organs are shown
+    if (!sexMeshes) return;
     const st = useViewer.getState();
-    const femaleOnly = f && !(m && !prev.m);
-    if (femaleOnly && !st.hiddenMeshIds.urethra) st.hideMeshes(['urethra']);
-    else if (!femaleOnly && st.hiddenMeshIds.urethra && prev.f) {
-      const { urethra: _u, ...rest } = st.hiddenMeshIds;
-      useViewer.setState({ hiddenMeshIds: rest });
-    }
-  }, [s.groupVisible]);
+    st.setExcluded(sex === 'feminino' ? sexMeshes.male : sexMeshes.female);
+    // the reproductive layer follows the chosen body
+    const on = !!(st.groupVisible.reprodutor || st.groupVisible[FEMALE_GROUP]);
+    st.setGroupVisible(sex === 'feminino' ? FEMALE_GROUP : 'reprodutor', on);
+    st.setGroupVisible(sex === 'feminino' ? 'reprodutor' : FEMALE_GROUP, false);
+    // the catalog skin has male external genitalia: cut them out (the female pubic skin covers the gap)
+    library.setGroupClipping('tegumentar', sex === 'feminino' ? GENITAL_CLIP : null, true, sex === 'feminino' ? ['pele'] : undefined);
+    useViewer.setState({});
+    try {
+      localStorage.setItem(SEX_KEY, sex);
+    } catch {}
+  }, [sex, sexMeshes, library]);
 
   // ---- lazy model loading: a model is requested the first time one of its groups becomes visible
   useEffect(() => {
@@ -204,6 +226,9 @@ export function HumanLab({ canUseStudio, tierLabel }: { canUseStudio: boolean; t
     (id: string, focus = true) => {
       if (!index) return;
       const meshes = index.meshesOf(id);
+      // a structure of the other body: switch to it
+      const excluded = useViewer.getState().excludedMeshIds;
+      if (meshes.length && meshes.every((m) => excluded[m])) setSex((v) => (v === 'feminino' ? 'masculino' : 'feminino'));
       // peel the outer layers so the chosen structure is actually exposed (atlas behaviour)
       const groups = new Set(meshes.map((m) => index.meshInfo.get(m)?.group));
       // organs: bones fade to a faint cage; heart and vessels sit deep in the thorax, so fade them further
@@ -322,7 +347,7 @@ export function HumanLab({ canUseStudio, tierLabel }: { canUseStudio: boolean; t
         return;
       }
       const group = what === 'reprodutor-fem' ? FEMALE_GROUP : 'reprodutor';
-      st.setGroupVisible(what === 'reprodutor-fem' ? 'reprodutor' : FEMALE_GROUP, false);
+      setSex(what === 'reprodutor-fem' ? 'feminino' : 'masculino');
       showSystem(group);
       st.setGroupVisible('nervoso', false);
       st.setGroupOpacity('digestorio', 0.12);
@@ -382,6 +407,12 @@ export function HumanLab({ canUseStudio, tierLabel }: { canUseStudio: boolean; t
     (meshId: string, point: THREE.Vector3) => {
       if (!index) return;
       const info = index.meshInfo.get(meshId);
+      // female skin pieces belong to named structures (breast, vulva), not to a body region
+      if (FEMALE_SKIN.includes(meshId)) {
+        setRegion(null);
+        selectStructure(meshId === 'pele-vulva' ? 'vulva' : `mama-${meshId.slice(-3)}`, false);
+        return;
+      }
       if (info?.group === 'tegumentar') {
         const r = index.regionAt([point.x, point.y, point.z]);
         if (r) openRegion(r);
@@ -702,6 +733,22 @@ export function HumanLab({ canUseStudio, tierLabel }: { canUseStudio: boolean; t
             </ul>
           </div>
           <div className="border-b border-line p-3" data-testid="organ-tools">
+            <p className="eyebrow mb-2 px-1">Corpo</p>
+            <div className="mb-3 grid grid-cols-2 gap-1 rounded-full bg-ink-800 p-1" role="radiogroup" aria-label="Corpo masculino ou feminino">
+              {(['masculino', 'feminino'] as const).map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  role="radio"
+                  aria-checked={sex === v}
+                  className={`h-8 rounded-full text-[12.5px] font-medium ${sex === v ? 'bg-ink-900 text-fg shadow-sm' : 'text-fg-muted hover:text-fg'}`}
+                  onClick={() => setSex(v)}
+                  data-testid={`sex-${v}`}
+                >
+                  {v === 'masculino' ? 'Masculino' : 'Feminino'}
+                </button>
+              ))}
+            </div>
             <p className="eyebrow mb-2 px-1">Rins, encéfalo e reprodução</p>
             <div className="flex flex-wrap gap-1.5">
               <button type="button" className={`btn h-8 px-2.5 text-[12.5px] ${cut === 'rim' ? 'btn-primary' : 'btn-ghost'}`} aria-pressed={cut === 'rim'} onClick={() => toggleCut('rim')} data-testid="kidney-cut">
@@ -713,15 +760,15 @@ export function HumanLab({ canUseStudio, tierLabel }: { canUseStudio: boolean; t
               <button type="button" className="btn btn-ghost h-8 px-2.5 text-[12.5px]" onClick={() => showOrgan('encefalo')} data-testid="view-brain">
                 <Icon name="focus" size={14} /> Ver encéfalo
               </button>
-              <button type="button" className="btn btn-ghost h-8 px-2.5 text-[12.5px]" onClick={() => showOrgan(s.groupVisible[FEMALE_GROUP] ? 'reprodutor-masc' : 'reprodutor-fem')} data-testid="toggle-sex">
-                <Icon name="rotate" size={14} /> {s.groupVisible[FEMALE_GROUP] ? 'Ver sistema masculino' : 'Ver sistema feminino'}
+<button type="button" className="btn btn-ghost h-8 px-2.5 text-[12.5px]" onClick={() => showOrgan(sex === 'feminino' ? 'reprodutor-fem' : 'reprodutor-masc')} data-testid="view-repro">
+                <Icon name="focus" size={14} /> Ver sistema reprodutor
               </button>
             </div>
           </div>
           {!pres && (
             <div className="shrink-0 p-2">
               <p className="eyebrow px-1.5 pt-1 pb-2">Sistemas</p>
-              <LayersPanel groups={index.raw.groups} models={index.raw.models} />
+              <LayersPanel groups={index.raw.groups.filter((g) => g.id !== (sex === 'feminino' ? 'reprodutor' : FEMALE_GROUP))} models={index.raw.models} />
             </div>
           )}
         </aside>

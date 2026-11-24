@@ -21,6 +21,12 @@ export interface ViewerState {
   groupVisible: Record<string, boolean>;
   groupOpacity: Record<string, number>;
   hiddenMeshIds: Record<string, true>;
+  /**
+   * Meshes that are not part of the body variant being shown (e.g. the male
+   * organs while the female body is chosen). Unlike `hiddenMeshIds`, "show all"
+   * does not bring them back.
+   */
+  excludedMeshIds: Record<string, true>;
   /** When set, everything except these meshes is ghosted. */
   isolatedMeshIds: string[] | null;
   quality: QualityProfile;
@@ -39,6 +45,7 @@ export interface ViewerState {
   setGroupOpacity(group: string, opacity: number): void;
   hideMeshes(ids: string[]): void;
   showAll(): void;
+  setExcluded(ids: string[]): void;
   isolate(ids: string[] | null): void;
   setQuality(q: QualityProfile): void;
   setPresentation(on: boolean): void;
@@ -56,6 +63,7 @@ export const useViewer = create<ViewerState>((set) => ({
   groupVisible: {},
   groupOpacity: {},
   hiddenMeshIds: {},
+  excludedMeshIds: {},
   isolatedMeshIds: null,
   quality: 'equilibrado',
   presentation: false,
@@ -83,6 +91,7 @@ export const useViewer = create<ViewerState>((set) => ({
   setGroupOpacity: (group, opacity) => set((s) => ({ groupOpacity: { ...s.groupOpacity, [group]: Math.min(1, Math.max(0, opacity)) } })),
   hideMeshes: (ids) => set((s) => ({ hiddenMeshIds: { ...s.hiddenMeshIds, ...Object.fromEntries(ids.map((i) => [i, true as const])) } })),
   showAll: () => set({ hiddenMeshIds: {}, isolatedMeshIds: null }),
+  setExcluded: (ids) => set({ excludedMeshIds: Object.fromEntries(ids.map((i) => [i, true as const])) }),
   isolate: (ids) => set({ isolatedMeshIds: ids && ids.length ? ids : null }),
   setQuality: (quality) => set({ quality }),
   setPresentation: (presentation) => set({ presentation, uiHidden: false }),

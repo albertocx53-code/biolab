@@ -66,14 +66,20 @@ test.describe('Laboratório Corpo Humano', () => {
     await page.getByTestId('brain-cut').click();
     await expect(page.getByRole('button', { name: 'Fechar o encéfalo' })).toBeVisible();
     expect((await bl()).n).toBe(true);
-    // feminino e masculino se alternam
+    // corpo masculino ou feminino: troca os órgãos reprodutores e a pele
     expect((await bl()).f).toBe(false);
-    await page.getByTestId('toggle-sex').click();
+    const excluded = (id: string) => page.evaluate((m) => !!(window as any).__biolab.viewer.getState().excludedMeshIds[m], id);
+    expect(await excluded('utero')).toBe(true);
+    await page.getByTestId('view-repro').click();
+    await page.getByTestId('sex-feminino').click();
     await page.waitForTimeout(300);
     expect(await bl()).toMatchObject({ f: true, m: false });
-    await page.getByTestId('toggle-sex').click();
+    expect(await excluded('prostate')).toBe(true);
+    expect(await excluded('pele-mama-esq')).toBe(false);
+    await page.getByTestId('sex-masculino').click();
     await page.waitForTimeout(300);
     expect(await bl()).toMatchObject({ f: false, m: true });
+    expect(await excluded('pele-mama-esq')).toBe(true);
     // a ficha do útero vem do conteúdo próprio
     await page.getByRole('combobox', { name: 'Buscar estrutura anatômica' }).fill('utero');
     await page.keyboard.press('Enter');

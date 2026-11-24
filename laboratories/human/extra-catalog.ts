@@ -57,7 +57,17 @@ export const EXTRA_MESHES: ExtraMesh[] = [
   ...both('tuba-uterina', FEMALE_GROUP, 'tuba-uterina', 'Tuba uterina', 'Tuba uterina', 'Uterine tube'),
   ...both('ovario', FEMALE_GROUP, 'ovario', 'Ovário', 'Ovarium', 'Ovary'),
   { id: 'vagina', g: FEMALE_GROUP, c: 'vagina', n: 'Vagina', la: 'Vagina', en: 'Vagina' },
+  { id: 'vulva', g: FEMALE_GROUP, c: 'vulva', n: 'Vulva: pequenos lábios e clitóris', la: 'Vulva', en: 'Vulva' },
+  ...both('glandula-mamaria', FEMALE_GROUP, 'glandula-mamaria', 'Glândula mamária', 'Glandula mammaria', 'Mammary gland'),
+  // female skin (only in the female body)
+  { id: 'pele-vulva', g: 'tegumentar', c: 'pele-genital', n: 'Monte do púbis e grandes lábios', la: 'Mons pubis; labia majora', en: 'Mons pubis and labia majora' },
+  ...both('pele-mama', 'tegumentar', 'pele', 'Mama', 'Mamma', 'Breast'),
+  ...both('areola', 'tegumentar', 'areola', 'Aréola e papila mamária', 'Areola mammae; papilla mammaria', 'Areola and nipple'),
 ];
+
+/** Skin pieces that exist only in the female body. */
+export const FEMALE_SKIN = ['pele-vulva', 'pele-mama-esq', 'pele-mama-dir', 'areola-esq', 'areola-dir'];
+
 
 const lr = (id: string) => [`${id}-esq`, `${id}-dir`];
 const lobes = (side: 'esq' | 'dir') => ['lobo-frontal', 'lobo-parietal', 'lobo-temporal', 'lobo-occipital'].map((l) => `${l}-${side}`);
@@ -78,7 +88,9 @@ export const EXTRA_ORGAN_COMPOSITES: ExtraComposite[] = [
     g: 'nervoso',
     members: [...lobes('esq'), ...lobes('dir'), 'corpo-caloso', ...lr('ventriculo-lateral'), ...lr('talamo'), 'hipotalamo', 'cerebelo', 'mesencefalo', 'ponte', 'bulbo'],
   },
-  { id: 'sistema-reprodutor-feminino', n: 'Sistema reprodutor feminino', la: 'Organa genitalia feminina', g: FEMALE_GROUP, members: ['utero', 'colo-do-utero', ...lr('tuba-uterina'), ...lr('ovario'), 'vagina'] },
+  { id: 'sistema-reprodutor-feminino', n: 'Sistema reprodutor feminino', la: 'Organa genitalia feminina', g: FEMALE_GROUP, members: ['utero', 'colo-do-utero', ...lr('tuba-uterina'), ...lr('ovario'), 'vagina', 'vulva'] },
+  { id: 'mama-esq', n: 'Mama (lado esquerdo)', la: 'Mamma sinistra', g: FEMALE_GROUP, members: ['pele-mama-esq', 'areola-esq', 'glandula-mamaria-esq'] },
+  { id: 'mama-dir', n: 'Mama (lado direito)', la: 'Mamma dextra', g: FEMALE_GROUP, members: ['pele-mama-dir', 'areola-dir', 'glandula-mamaria-dir'] },
 ];
 
 export const EXTRA_BOUNDS: Record<string, { ctr: [number, number, number]; sz: [number, number, number] }> = {
@@ -108,9 +120,17 @@ export const EXTRA_BOUNDS: Record<string, { ctr: [number, number, number]; sz: [
   'ventriculo-lateral-dir': { ctr: [-0.015, 1.638, -0.013], sz: [0.025, 0.043, 0.063] },
   'utero': { ctr: [0, 0.9, -0.022], sz: [0.044, 0.044, 0.056] },
   'colo-do-utero': { ctr: [0, 0.878, -0.052], sz: [0.017, 0.027, 0.028] },
-  'vagina': { ctr: [0, 0.832, -0.027], sz: [0.02, 0.095, 0.083] },
+  'vagina': { ctr: [0, 0.812, -0.019], sz: [0.02, 0.133, 0.102] },
   'ovario-esq': { ctr: [0.048, 0.892, -0.036], sz: [0.021, 0.03, 0.019] },
   'ovario-dir': { ctr: [-0.048, 0.892, -0.036], sz: [0.021, 0.03, 0.019] },
   'tuba-uterina-esq': { ctr: [0.045, 0.896, -0.03], sz: [0.047, 0.046, 0.059] },
   'tuba-uterina-dir': { ctr: [-0.045, 0.896, -0.03], sz: [0.047, 0.046, 0.059] },
+  'vulva': { ctr: [0, 0.768, 0.056], sz: [0.015, 0.083, 0.059] },
+  'pele-vulva': { ctr: [0, 0.768, 0.037], sz: [0.104, 0.16, 0.098] },
+  'pele-mama-esq': { ctr: [0.095, 1.266, 0.1], sz: [0.128, 0.137, 0.112] },
+  'pele-mama-dir': { ctr: [-0.095, 1.266, 0.1], sz: [0.128, 0.137, 0.112] },
+  'areola-esq': { ctr: [0.106, 1.243, 0.157], sz: [0.022, 0.024, 0.012] },
+  'areola-dir': { ctr: [-0.106, 1.243, 0.157], sz: [0.022, 0.024, 0.012] },
+  'glandula-mamaria-esq': { ctr: [0.094, 1.244, 0.126], sz: [0.092, 0.091, 0.063] },
+  'glandula-mamaria-dir': { ctr: [-0.094, 1.244, 0.126], sz: [0.092, 0.091, 0.063] },
 };
