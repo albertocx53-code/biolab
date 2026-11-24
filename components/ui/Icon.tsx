@@ -1,6 +1,8 @@
 /** Minimal inline icon set (stroke icons, 24px grid). */
 const PATHS: Record<string, string> = {
   play: 'M7 4.5v15l13-7.5-13-7.5Z',
+  download: 'M12 3v12m0 0-5-5m5 5 5-5M4 17v3h16v-3',
+  printer: 'M6 9V3h12v6M6 18H4a1 1 0 0 1-1-1v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6a1 1 0 0 1-1 1h-2M6 14h12v7H6z',
   dna: 'M7 3c0 6 10 6 10 9s-10 3-10 9M17 3c0 6-10 6-10 9s10 3 10 9M8.5 6.5h7M9 17.5h6M10.5 9.5h3M10.5 14.5h3',
   pause: 'M7 4h3.5v16H7zM13.5 4H17v16h-3.5z',
   film: 'M4 4h16v16H4zM4 9h16M4 15h16M9 4v5M15 4v5M9 15v5M15 15v5',

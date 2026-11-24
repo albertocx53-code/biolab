@@ -32,7 +32,7 @@ import { isWebGLAvailable, loadSavedQuality, pickDefaultQuality, readDeviceSigna
 import { HUMAN_CONTENT } from '@/data/biology/human/content';
 import { ProcessDriver } from '@/laboratories/shared/ProcessDriver';
 import { ProcessPlayer } from '@/laboratories/shared/ProcessPlayer';
-import { useProcess } from '@/laboratories/shared/process';
+import { processClock, useProcess } from '@/laboratories/shared/process';
 import { baseId, buildHumanIndex, SYSTEM_NOTE, type HumanIndex, type RawHumanCatalog, type Region } from './catalog';
 import { CirculationLayer, heartCentre } from './CirculationLayer';
 import { HUMAN_FALLBACK, HUMAN_MATERIALS } from './materials';
@@ -390,6 +390,21 @@ export function HumanLab({ canUseStudio, tierLabel }: { canUseStudio: boolean; t
     },
     [index, selectStructure, showOrgan, showSystem, startProcess],
   );
+
+  // Read-only hooks used by the Studio render script (scripts/studio-renders.ts) to stage lesson images.
+  const studioHook = useRef({ runLessonAction, index });
+  studioHook.current = { runLessonAction, index };
+  useEffect(() => {
+    const w = window as unknown as { __biolab?: Record<string, unknown> };
+    w.__biolab = {
+      ...(w.__biolab ?? {}),
+      process: useProcess,
+      clock: processClock,
+      lesson: (a: LessonAction) => studioHook.current.runLessonAction(a),
+      model: () => 'corpo',
+      structureOf: (meshId: string) => studioHook.current.index?.structureOfMesh(meshId) ?? null,
+    };
+  }, []);
 
   const openRegion = useCallback(
     (r: Region) => {

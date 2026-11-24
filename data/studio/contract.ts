@@ -20,6 +20,7 @@ export const STUDIO_GENERATORS = [
   { id: 'planos-de-aula', name: 'Planos de aula' },
   { id: 'aulas-emergenciais', name: 'Aulas emergenciais' },
 ] as const;
+export type StudioGeneratorId = (typeof STUDIO_GENERATORS)[number]['id'];
 
 export function studioUrl(ref: Omit<StudioTopicRef, 'v'>): string {
   const p = new URLSearchParams({ v: '1', lab: ref.laboratoryId, estrutura: ref.structureId });

@@ -253,6 +253,19 @@ export function ProceduralLab({ config: cfg, canUseStudio, tierLabel }: { config
     [catalog, cfg.tools, info, modelId, selectStructure, switchModel],
   );
 
+  // Read-only hooks used by the Studio render script (scripts/studio-renders.ts) to stage lesson images.
+  const studioHook = useRef({ runLessonAction, modelId, structureOfMesh });
+  studioHook.current = { runLessonAction, modelId, structureOfMesh };
+  useEffect(() => {
+    const w = window as unknown as { __biolab?: Record<string, unknown> };
+    w.__biolab = {
+      ...(w.__biolab ?? {}),
+      lesson: (a: LessonAction) => studioHook.current.runLessonAction(a),
+      model: () => studioHook.current.modelId,
+      structureOf: (meshId: string) => studioHook.current.structureOfMesh.get(meshId) ?? null,
+    };
+  }, []);
+
   const onPick = useCallback(
     (meshId: string) => {
       const sid = structureOfMesh.get(meshId);

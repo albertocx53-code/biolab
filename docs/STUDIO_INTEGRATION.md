@@ -18,19 +18,48 @@ StudioTopicRef = {
 - No servidor, `services/content/topics.ts` resolve o tópico (nome, sistema, descrição, referências)
   a partir do `catalog.json` e do conteúdo curado. O Studio nunca confia em texto vindo da URL.
 
-## Comportamento atual
+## Studio (`/studio`)
+
+1. **Escolha da aula**: o professor escolhe um laboratório e um dos 41 roteiros de aula. Quando
+   chega um tema do laboratório (`?v=1&lab=…&estrutura=…`), o Studio mostra o tema e põe primeiro
+   as aulas que mostram aquela estrutura.
+2. **Pacote da aula** (`services/studio/pack.ts`, só no servidor): roteiro + conteúdo do catálogo de
+   cada estrutura + etapas das animações + imagens 3D (`data/studio/renders.json`).
+3. **Geradores** (`lib/studio/*`, puros e testados em `tests/unit/studio.test.ts`):
+
+| Gerador | Imagens | Saída |
+|---|---|---|
+| Slides | Modelo 3D da aula, estrutura isolada, estrutura destacada no modelo, etapas das animações, modelo com estruturas numeradas | Apresentar em tela cheia, baixar PowerPoint (`pptxgenjs`, mesmo layout), imprimir/PDF |
+| Atividade | Desenho em linhas numerado (para colorir) ou imagem 3D colorida, perguntas com imagem, sequência de etapas | Imprimir/PDF, com gabarito opcional e "gerar outra versão" |
+| Mapa mental | Imagem 3D ou desenho em cada ramo | Imprimir/PDF (A4 deitado) |
+| Plano de aula | — | Imprimir/PDF, baixar para Word |
+| Aula emergencial | — | Imprimir/PDF, baixar para Word |
+
+## Imagens 3D (`scripts/studio-renders.ts`)
+
+O script abre cada laboratório num navegador (Playwright), executa as ações de cada roteiro e salva
+em `public/studio/<aula>/`:
+
+- `capa.webp` e as vistas de modelo, com `*-linhas.png` (desenho em linhas feito a partir de passes
+  de identificação das estruturas e de normais) e a posição na tela de cada estrutura visível
+  (rótulos numerados);
+- para cada estrutura: a estrutura isolada (`.webp` + `-linhas.png`) e o modelo inteiro com a
+  estrutura destacada (`-ctx.webp`);
+- para cada animação: até 6 etapas (`-p<n>.webp`).
+
+Para gerar de novo (depois de mudar modelos ou roteiros):
+
+```bash
+npm run build && npm start              # em outro terminal, porta 3000
+BIOLAB_URL=http://localhost:3000 npm run studio:renders              # todas as aulas
+BIOLAB_URL=http://localhost:3000 npm run studio:renders -- animais   # só um laboratório ou aula
+```
+
+## Comportamento por plano (com `BIOLAB_REQUIRE_KEY=1`)
 
 | Plano | No painel científico | Em `/studio` |
 |---|---|---|
 | Básico | Botão "Criar materiais sobre este tema" desativado, com cadeado e aviso do plano Completo | Aviso de que o Studio é do plano Completo |
-| Completo | Link "Criar materiais sobre este tema" | Mostra o tópico recebido e o aviso "Geradores em desenvolvimento" |
+| Completo | Link "Criar materiais sobre este tema" | Studio completo |
 
-## Geradores planejados (`STUDIO_GENERATORS`)
-
-Slides de apresentação, atividades para alunos, mapas mentais, planos de aula e aulas emergenciais. Nenhum funciona ainda.
-
-## Regras para a fase 2
-
-- Os geradores rodam no servidor; chaves de API de IA nunca vão para o cliente.
-- Todo conteúdo gerado deve partir dos textos curados e revisados da estrutura.
-- Mudanças incompatíveis no contrato criam `v: 2`; o Studio continua aceitando `v: 1`.
+Com o acesso livre (padrão), todos veem o Studio completo.

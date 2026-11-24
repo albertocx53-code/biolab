@@ -107,12 +107,12 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             <p className="eyebrow">BioLab 3D Studio</p>
             <p className="mt-1 text-fg-muted">
               {studio
-                ? 'Seu plano inclui o Studio. Os geradores de slides, atividades, mapas mentais, planos de aula e aulas emergenciais estão em desenvolvimento.'
-                : 'Geradores de materiais didáticos fazem parte do Plano Completo e estão em desenvolvimento.'}
+                ? 'Crie slides com imagens 3D, atividades com desenhos e gabarito, mapas mentais, planos de aula e aulas emergenciais a partir das aulas dos laboratórios.'
+                : 'Geradores de materiais didáticos (slides, atividades, mapas mentais, planos de aula e aulas emergenciais) fazem parte do Plano Completo.'}
             </p>
           </div>
           <Link href="/studio" className="btn btn-ghost shrink-0">
-            Conhecer o Studio <Icon name="arrowRight" size={16} />
+            {studio ? 'Abrir o Studio' : 'Conhecer o Studio'} <Icon name="arrowRight" size={16} />
           </Link>
         </section>
       </main>

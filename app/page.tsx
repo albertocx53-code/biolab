@@ -49,7 +49,7 @@ export default async function AccessPage({ searchParams }: { searchParams: Promi
               <>
                 <li className="flex gap-3"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan" />Sem cadastro e sem senha: sua chave é o seu acesso.</li>
                 <li className="flex gap-3"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan" />Plano Básico: os seis laboratórios 3D e o Modo Apresentação.</li>
-                <li className="flex gap-3"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan" />Plano Completo: tudo do Básico e o BioLab 3D Studio (geradores em desenvolvimento).</li>
+                <li className="flex gap-3"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan" />Plano Completo: tudo do Básico e o BioLab 3D Studio (slides, atividades, mapas mentais e planos de aula).</li>
               </>
             )}
           </ul>

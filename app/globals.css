@@ -263,3 +263,42 @@ html:has(body.theme-light) {
   width: 28px;
   accent-color: var(--color-fg);
 }
+
+/* ---- Studio: printable documents (always paper white, whatever the app theme) ---- */
+.paper {
+  background: #ffffff;
+  color: #0f172a;
+  margin: 0 auto;
+  max-width: 794px; /* A4 at 96 dpi */
+  padding: 44px 48px;
+  border-radius: 6px;
+  box-shadow: 0 10px 30px -12px rgb(15 23 42 / 0.35);
+}
+@media (max-width: 640px) {
+  .paper {
+    padding: 22px 16px;
+    border-radius: 0;
+  }
+}
+.paper.paper-wide {
+  max-width: 1123px; /* A4 landscape */
+  padding: 16px;
+}
+@media print {
+  html,
+  body {
+    background: #ffffff !important;
+  }
+  .paper {
+    max-width: none;
+    padding: 0;
+    box-shadow: none;
+    border-radius: 0;
+  }
+  .page-break {
+    break-before: page;
+  }
+  .avoid-break {
+    break-inside: avoid;
+  }
+}

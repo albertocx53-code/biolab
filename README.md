@@ -27,12 +27,17 @@ Em produção ele se recusa a iniciar sem segredos reais.
 | `npm test` | Testes unitários (Vitest) |
 | `npm run test:e2e` | Testes de navegador (Playwright, contra o build de produção) |
 | `npm run keys:create\|list\|revoke` | Administração de chaves (só no servidor) |
+| `npm run studio:renders` | Gera as imagens 3D do Studio (com o site rodando; ver docs/STUDIO_INTEGRATION.md) |
 
-## Planos
+## Acesso
+
+Por padrão o acesso é **livre**: a página inicial tem só o botão "Entrar na plataforma" e todos os
+recursos ficam liberados, inclusive o Studio. Para voltar a exigir chave (planos Básico e
+Completo), defina `BIOLAB_REQUIRE_KEY=1` no ambiente (os testes e2e rodam nesse modo).
 
 - **Básico**: os seis laboratórios e o modo apresentação.
-- **Completo**: tudo do Básico + BioLab Studio (geradores de slides, provas e atividades).
-  Os geradores são a **fase 2** e ainda não funcionam; a interface diz isso claramente.
+- **Completo**: tudo do Básico + BioLab Studio (slides com imagens 3D e PowerPoint, atividades com
+  desenhos numerados e gabarito, mapas mentais, planos de aula e aulas emergenciais).
 
 ## Documentação
 
