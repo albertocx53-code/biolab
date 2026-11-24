@@ -9,7 +9,7 @@ import { dots, merge, paint, place, rng, tube } from '@/laboratories/shared/geom
 import { presetFor, type BuiltModel, type MeshDef } from '@/laboratories/shared/types';
 import { ac, fibSphere, lathe, latheCutFaces, limb, loft, organ, paintDorsal, plate, smooth, V, type Profile } from './kit';
 import { colorize } from './materials';
-import { frogExterior } from './vertebrates';
+import { frogExterior } from './frog';
 
 type Get = (id: string) => THREE.Object3D | undefined;
 const show = (o: THREE.Object3D | undefined, s: number) => o && o.scale.setScalar(Math.max(0.0001, s));

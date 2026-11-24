@@ -141,11 +141,12 @@ export function sweep(points: THREE.Vector3[], section: (t: number) => SweepSect
       uv.push(r.t, j / radial);
     }
   }
+  // wound so that the normals point outwards
   for (let i = 0; i < rows.length - 1; i++)
     for (let j = 0; j < radial; j++) {
       const a = i * (radial + 1) + j;
       const b = a + radial + 1;
-      idx.push(a, b, a + 1, b, b + 1, a + 1);
+      idx.push(a, a + 1, b, b, a + 1, b + 1);
     }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));

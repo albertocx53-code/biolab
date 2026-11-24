@@ -34,8 +34,6 @@ export const DEFAULT_OPACITY: Record<string, number> = {
   'parede-minhoca': 0.3,
   septos: 0.35,
   nadadeiras: 0.88,
-  'pele-sapo': 0.3,
-  penas: 0.3,
   'sacos-aereos': 0.5,
   'face-aboral': 0.32,
   'massa-gelatinosa': 0.35,
