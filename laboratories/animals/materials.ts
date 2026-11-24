@@ -30,8 +30,6 @@ export const ANIMAL_FALLBACK: MaterialSpec = FINISH;
 export const LEGEND_COLOR: Record<string, string> = ANIMAL_COLOR;
 /** Skins and walls translucent by default so the organs inside show. */
 export const DEFAULT_OPACITY: Record<string, number> = {
-  'corpo-planaria': 0.42,
-  'parede-minhoca': 0.3,
   septos: 0.35,
   nadadeiras: 0.88,
   'sacos-aereos': 0.5,
