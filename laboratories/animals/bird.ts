@@ -71,12 +71,14 @@ function feather(base: THREE.Vector3, dir: THREE.Vector3, across: THREE.Vector3,
       .addScaledVector(dir, u * len)
       .addScaledVector(across, side * w)
       .addScaledVector(normal, curl * Math.sin(Math.PI * u) + 0.02 * Math.abs(side));
-  }, 24, 10);
+  }, 90, 14);
   return vcolor(g, (_p, _n, u, v) => {
     const c = col(u, v);
     // pale shaft (rachis) and fine barb lines
     if (Math.abs(v - 0.5) < 0.04) c.lerp(new THREE.Color('#E8EAEE'), 0.5);
-    c.lerp(new THREE.Color('#5A606C'), Math.pow(Math.abs(Math.sin((u * 40 + Math.abs(v - 0.5) * 6) * Math.PI)), 30) * 0.15);
+    c.lerp(new THREE.Color('#4A505C'), Math.pow(Math.abs(Math.sin((u * 34 + Math.abs(v - 0.5) * 7) * Math.PI)), 10) * 0.28);
+    // the vane thins and frays towards its edge
+    c.lerp(new THREE.Color('#F2F3F5'), Math.pow(Math.abs(v - 0.5) * 2, 6) * 0.18);
     return c;
   });
 }
@@ -211,5 +213,5 @@ export function bird(): BuiltModel {
   meshes.push({ id: 'av-intestino', structure: 'intestino-vertebrado', geometry: merge([paint(coil(-1.2, -0.35, -0.15, -0.5, 0.0, 3, 0.065), ac('intestino-vertebrado')), paint(tube([V(-1.2, -0.45, 0), V(-1.6, -0.35, 0), V(-1.85, -0.25, 0)], 0.075, false, 10, 8), ac('intestino-vertebrado'))]) });
   meshes.push({ id: 'av-rins', structure: 'rins', geometry: merge([organ(0.55, 0.1, 0.14, [-0.85, 0.52, 0.18], ac('rins'), E(0, 0, 0.08)), organ(0.55, 0.1, 0.14, [-0.85, 0.52, -0.18], ac('rins'), E(0, 0, 0.08))]) });
   meshes.push({ id: 'av-cloaca', structure: 'cloaca', geometry: organ(0.15, 0.15, 0.16, [-1.92, -0.22, 0], ac('cloaca')) });
-  return { meshes: colorize(meshes), anchors: {}, preset: presetFor(17.5, [-0.3, 0.8, 0], 0.15, 0.12) };
+  return { meshes: colorize(meshes), anchors: {}, preset: presetFor(19, [-0.3, 1.25, 0], 0.15, 0.12) };
 }

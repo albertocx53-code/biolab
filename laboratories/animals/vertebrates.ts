@@ -74,8 +74,16 @@ export const HEART_GRID: [number, number][] = [
 ];
 const HCUT: Cut = { center: 0, width: Math.PI * 0.9 };
 
+/** Heart chamber cut open at the front: muscular outside, blood-coloured lining inside. */
 function chamber(a: number, b: number, c: number, at: THREE.Vector3, color: string) {
-  return paint(place(wall(ellipsoid(a, b, c), 0.78, HCUT, [36, 24]), at), color);
+  const g = place(wall(ellipsoid(a, b, c), 0.78, HCUT, [48, 32]), at);
+  const blood = new THREE.Color(color);
+  return vcolor(g, (p) => {
+    const e = Math.hypot((p.x - at.x) / a, (p.y - at.y) / b, (p.z - at.z) / c);
+    const outer = smooth((e - 0.84) / 0.1);
+    const muscle = mix('#9B3B36', '#B85A4E', fbm(p, 4, 2)).lerp(blood, 0.3);
+    return blood.clone().lerp(muscle, outer);
+  });
 }
 
 /** Blood paths through each heart (venous in, arterial out). */
@@ -167,7 +175,7 @@ function hearts(): BuiltModel {
     meshes.push({ id: `sv-${i}`, structure: 'sangue-venoso', geometry: paint(new THREE.SphereGeometry(0.11, 10, 8), '#2B59C3') });
     meshes.push({ id: `sa-${i}`, structure: 'sangue-arterial', geometry: paint(new THREE.SphereGeometry(0.11, 10, 8), '#D62828') });
   }
-  return { meshes: colorize(meshes), anchors: {}, preset: presetFor(17, [0.6, -0.1, 0], 0.1, 0) };
+  return { meshes: colorize(meshes), anchors: {}, preset: presetFor(19.5, [0.6, 0.25, 0], 0.1, 0) };
 }
 
 const HEART_PARTS = [

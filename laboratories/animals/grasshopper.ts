@@ -57,12 +57,18 @@ function head() {
 function eyes() {
   const parts: THREE.BufferGeometry[] = [];
   for (const s of [1, -1]) {
-    const e = new THREE.SphereGeometry(1, 40, 28);
+    const e = new THREE.SphereGeometry(1, 120, 90);
     e.scale(0.3, 0.42, 0.2).rotateZ(-0.28).translate(3.43, 0.8, s * 0.56);
     vcolor(e, (p) => {
-      // vertical stripes and a faint facet sparkle
+      // vertical stripes, the hexagonal lattice of ommatidia and a dark pseudopupil facing the viewer
       const stripe = 0.5 + 0.5 * Math.sin((p.x - 3.43) * 38 + (p.y - 0.8) * 6);
-      return mix('#5C3B20', '#2B1B0E', stripe * 0.6).lerp(new THREE.Color('#8A6A44'), fbm(p, 14, 2) > 0.7 ? 0.35 : 0);
+      const X = p.x * 240;
+      const Y = p.y * 240;
+      const hex = Math.cos(X) + Math.cos(X / 2 + Y * 0.866) + Math.cos(X / 2 - Y * 0.866);
+      const facetEdge = 1 - Math.min(1, Math.max(0, (hex + 0.9) / 1.2));
+      const c = mix('#6A4526', '#2B1B0E', stripe * 0.6).lerp(new THREE.Color('#8A6A44'), fbm(p, 14, 2) > 0.7 ? 0.3 : 0);
+      c.lerp(new THREE.Color('#1A0F07'), facetEdge * 0.22);
+      return c.lerp(new THREE.Color('#0B0603'), Math.exp(-((p.x - 3.45) ** 2 + (p.y - 0.82) ** 2) / 0.004) * 0.7);
     });
     parts.push(e);
     // median ocellus pair above the antennae

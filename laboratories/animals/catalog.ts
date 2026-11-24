@@ -90,7 +90,7 @@ export const ANIMAL_MODELS: AnimalModelInfo[] = [
     short: 'Estrela-do-mar',
     kind: 'invertebrado',
     realSize: 'de 10 a 30 cm',
-    summary: 'Estrela-do-mar com a face de cima translúcida mostrando o sistema ambulacral: madreporito, canal anelar, canais radiais, ampolas e pés ambulacrais; espinhos e boca na face oral.',
+    summary: 'Estrela-do-mar com dois braços abertos por cima mostrando o sistema ambulacral: madreporito, canal anelar, canais radiais, ampolas e pés ambulacrais; espinhos e boca na face oral.',
     structures: ['face-aboral', 'espinhos', 'madreporito', 'sistema-ambulacral', 'pes-ambulacrais', 'face-oral', 'boca'],
     detailOf: 'equinodermos',
     processes: [],

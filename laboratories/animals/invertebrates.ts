@@ -5,6 +5,7 @@
  */
 import * as THREE from 'three';
 import { grasshopper } from './grasshopper';
+import { seaStarMeshes } from './seastar';
 import { dots, ellipsoid, merge, paint, place, rng, shell, tube, wobble } from '@/laboratories/shared/geometry';
 import { presetFor, type BuiltModel, type MeshDef } from '@/laboratories/shared/types';
 import { ac, lathe, latheCutFaces, limb, loft, organ, plate, slab, smooth, V, type Profile } from './kit';
@@ -688,57 +689,7 @@ function starOutline(R: number, r: number) {
 }
 
 function seaStar(): BuiltModel {
-  const r = rng(21);
-  const meshes: MeshDef[] = [];
-  const top = slab(starOutline(3.7, 1.25), 0.2, 0.26, 14);
-  top.translate(0, 0.32, 0);
-  meshes.push({ id: 'st-aboral', structure: 'face-aboral', geometry: top });
-  const bot = slab(starOutline(3.6, 1.2), 0.12, 0.16, 14);
-  bot.translate(0, -0.05, 0);
-  meshes.push({ id: 'st-oral', structure: 'face-oral', geometry: bot });
-  const armDir = (k: number) => {
-    const a = (k / ARMS) * Math.PI * 2 + Math.PI / 2;
-    // the slab is in XZ with shape y → −z
-    return V(Math.cos(a), 0, -Math.sin(a));
-  };
-  // spines on the aboral face
-  const spines: THREE.Vector3[] = [];
-  for (let k = 0; k < ARMS; k++) {
-    const d = armDir(k);
-    const side = V(-d.z, 0, d.x);
-    for (let i = 0; i < 22; i++) {
-      const s = r.range(0.5, 3.4);
-      const w = (1 - s / 3.9) * 0.6;
-      spines.push(d.clone().multiplyScalar(s).addScaledVector(side, r.range(-w, w)).add(V(0, 0.62, 0)));
-    }
-  }
-  meshes.push({ id: 'st-espinhos', structure: 'espinhos', geometry: dots(spines, 0.055, 1) });
-  // madreporite between two arms; stone canal down to the ring canal
-  const mad = armDir(0).add(armDir(1)).normalize().multiplyScalar(0.75);
-  meshes.push({ id: 'st-madreporito', structure: 'madreporito', geometry: place(new THREE.CylinderGeometry(0.24, 0.26, 0.08, 20), mad.clone().add(V(0, 0.66, 0))) });
-  // water vascular system: stone canal, ring canal, radial canals, ampullae
-  const wv: THREE.BufferGeometry[] = [tube([mad.clone().add(V(0, 0.6, 0)), mad.clone().multiplyScalar(0.9).add(V(0, 0.3, 0)), mad.clone().normalize().multiplyScalar(0.62).add(V(0, 0.05, 0))], 0.05, false, 20, 6)];
-  wv.push(new THREE.TorusGeometry(0.62, 0.1, 10, 48).rotateX(Math.PI / 2).translate(0, 0.05, 0));
-  const feet: THREE.BufferGeometry[] = [];
-  for (let k = 0; k < ARMS; k++) {
-    const d = armDir(k);
-    const side = V(-d.z, 0, d.x);
-    wv.push(tube([d.clone().multiplyScalar(0.62).add(V(0, 0.05, 0)), d.clone().multiplyScalar(3.3).add(V(0, 0.05, 0))], 0.085, false, 20, 8));
-    for (let i = 0; i < 9; i++) {
-      const s = 0.95 + i * 0.27;
-      for (const sd of [1, -1]) {
-        const w = 0.16 + 0.06 * (i % 2);
-        const base = d.clone().multiplyScalar(s).addScaledVector(side, sd * w);
-        wv.push(place(new THREE.SphereGeometry(0.075, 8, 6), base.clone().add(V(0, 0.2, 0)), undefined, V(1, 1.4, 1)));
-        // tube foot under the arm, with a suction disc
-        feet.push(place(new THREE.CylinderGeometry(0.045, 0.05, 0.45, 8), base.clone().add(V(0, -0.36, 0))));
-        feet.push(place(new THREE.CylinderGeometry(0.075, 0.075, 0.04, 12), base.clone().add(V(0, -0.6, 0))));
-      }
-    }
-  }
-  meshes.push({ id: 'st-ambulacral', structure: 'sistema-ambulacral', geometry: paint(merge(wv), ac('sistema-ambulacral')) });
-  meshes.push({ id: 'st-pes', structure: 'pes-ambulacrais', geometry: paint(merge(feet), ac('pes-ambulacrais')) });
-  meshes.push({ id: 'st-boca', structure: 'boca', geometry: place(new THREE.CylinderGeometry(0.32, 0.32, 0.04, 24), [0, -0.24, 0]) });
+  const meshes = seaStarMeshes();
   for (const m of meshes) place(m.geometry, [0, 0.4, 0], new THREE.Quaternion().setFromEuler(new THREE.Euler(0.12, 0.3, 0)));
   return { meshes: colorize(meshes), anchors: {}, preset: presetFor(12.5, [-0.4, 0.1, 0], 0.62, 0.1) };
 }
