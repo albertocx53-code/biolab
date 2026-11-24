@@ -15,6 +15,9 @@ Regra do projeto: o BioLab 3D é um produto pago, então **nenhum recurso com cl
 | Imagem `card-celulas.webp` | Renderizada por nós a partir do modelo procedural | Própria | Sim | Nenhuma |
 | Plantas: planta com flores, flor, semente e germinação, cortes de folha, caule e raiz (`laboratories/plants/`) | Geometria procedural escrita pelo BioLab 3D (nenhum arquivo de terceiros) | Própria | Sim | Nenhuma |
 | Imagem `card-plantas.webp` | Renderizada por nós a partir do modelo procedural | Própria | Sim | Nenhuma |
+| Genética: DNA, RNA, cromossomo, replicação, transcrição, tradução, mutações (`laboratories/genetics/`) | Geometria procedural escrita pelo BioLab 3D | Própria | Sim | Nenhuma |
+| Fonte 3D Helvetiker Bold (letras A, T, G, C, U no Genética), de `three/examples/fonts` | MAGENTA Ltd. (Helvetiker) | Licença MAGENTA (livre para uso, inclusive comercial, mantendo o aviso) | Sim | Aviso no rodapé do laboratório |
+| Imagem `card-genetica.webp` | Renderizada por nós a partir do modelo procedural | Própria | Sim | Nenhuma |
 | Rins, encéfalo, sistema reprodutor feminino, mamas, vulva e pele púbica feminina do corpo humano (`laboratories/human/organs.ts`) | Geometria procedural escrita pelo BioLab 3D, posicionada pelos pontos de referência do catálogo (vasos renais, crânio, medula, bexiga) | Própria | Sim | Nenhuma |
 | Decodificador Draco (`public/draco/`) | three.js | MIT | Sim | Aviso de copyright |
 | Fontes Inter e Manrope | @fontsource | SIL OFL 1.1 | Sim | — |

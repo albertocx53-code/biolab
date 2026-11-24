@@ -16,6 +16,8 @@ export interface LessonAction {
   model?: string;
   /** Shows a layer/system group of the laboratory (e.g. 'nervoso' in the human body). */
   group?: string;
+  /** Opens a classroom tool of the laboratory (e.g. 'punnett' in Genetics). */
+  tool?: string;
 }
 
 export interface LessonSection {

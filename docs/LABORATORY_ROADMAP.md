@@ -6,7 +6,7 @@ Fonte de verdade: `data/biology/laboratories.ts` (o painel lê dali).
 |---|---|---|---|
 | Corpo Humano | **Disponível** | 1 | 13 camadas/sistemas, 2.206 malhas, 19 regiões clicáveis, painel científico |
 | Células | **Disponível** | 3 | Células animal, vegetal e procariótica; mitocôndria e cloroplasto em detalhe; mitose; 8 animações |
-| Genética | Planejado | 2 | DNA, replicação, transcrição, tradução, cromossomos, heredogramas |
+| Genética | **Disponível** | 2 | DNA, nucleotídeos, RNA, cromossomo; replicação, transcrição, tradução e mutações animadas; quadro de Punnett e código genético |
 | Plantas | **Disponível** | 4 | Planta com flores, flor, semente e germinação, cortes de folha, caule e raiz; 10 animações |
 | Animais | Planejado | 3 | Comparação de sistemas entre grupos, embriologia |
 | Microrganismos | Planejado | 4 | Bactéria, vírus, fungos, protozoários, ciclos de doenças |

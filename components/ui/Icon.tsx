@@ -1,6 +1,7 @@
 /** Minimal inline icon set (stroke icons, 24px grid). */
 const PATHS: Record<string, string> = {
   play: 'M7 4.5v15l13-7.5-13-7.5Z',
+  dna: 'M7 3c0 6 10 6 10 9s-10 3-10 9M17 3c0 6-10 6-10 9s10 3 10 9M8.5 6.5h7M9 17.5h6M10.5 9.5h3M10.5 14.5h3',
   pause: 'M7 4h3.5v16H7zM13.5 4H17v16h-3.5z',
   film: 'M4 4h16v16H4zM4 9h16M4 15h16M9 4v5M15 4v5M9 15v5M15 15v5',
   layers: 'M12 3 2 8l10 5 10-5-10-5Zm-10 9 10 5 10-5M2 16l10 5 10-5',

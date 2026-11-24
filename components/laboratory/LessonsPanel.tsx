@@ -24,6 +24,7 @@ function actionIcon(a: LessonAction) {
   if (a.process) return 'play' as const;
   if (a.model) return 'layers' as const;
   if (a.group) return 'eye' as const;
+  if (a.tool) return 'grid' as const;
   return 'focus' as const;
 }
 
@@ -138,6 +139,8 @@ export function LessonsPanel({ lessons, lessonId, onLesson, onAction, onClose, s
                           data-testid="lesson-action"
                           data-structure={a.structure}
                           data-process={a.process}
+                          data-tool={a.tool}
+                          data-model={a.model}
                         >
                           <Icon name={running ? 'pause' : actionIcon(a)} size={13} /> {a.label}
                         </button>

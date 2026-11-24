@@ -2,6 +2,7 @@ import type { LaboratoryId } from '@/data/biology/schema';
 import { CELL_LESSONS } from './cells';
 import { HUMAN_LESSONS } from './human';
 import { PLANT_LESSONS } from './plants';
+import { GENETICS_LESSONS } from './genetics';
 import type { Lesson } from './types';
 
 export type { Lesson, LessonAction, LessonSection } from './types';
@@ -14,6 +15,9 @@ export const LESSON_REFS: Record<string, { title: string; publisher: string; url
   'bio-8': ref('Biology 2e, cap. 8 — Fotossíntese', 'biology-2e/pages/8-introduction'),
   'bio-10': ref('Biology 2e, cap. 10 — Reprodução celular', 'biology-2e/pages/10-introduction'),
   'bio-11': ref('Biology 2e, cap. 11 — Meiose e reprodução sexuada', 'biology-2e/pages/11-introduction'),
+  'bio-12': ref('Biology 2e, cap. 12 — Experimentos de Mendel e herança', 'biology-2e/pages/12-introduction'),
+  'bio-13': ref('Biology 2e, cap. 13 — Genética moderna da herança', 'biology-2e/pages/13-introduction'),
+  'bio-14': ref('Biology 2e, cap. 14 — DNA: estrutura e função', 'biology-2e/pages/14-introduction'),
   'bio-15': ref('Biology 2e, cap. 15 — Genes e proteínas', 'biology-2e/pages/15-introduction'),
   'bio-21': ref('Biology 2e, cap. 21 — Vírus', 'biology-2e/pages/21-introduction'),
   'bio-22': ref('Biology 2e, cap. 22 — Procariontes', 'biology-2e/pages/22-introduction'),
@@ -41,7 +45,7 @@ function ref(title: string, path: string) {
   return { title, publisher: 'OpenStax (Rice University)', url: `https://openstax.org/books/${path}`, license: 'CC BY 4.0' };
 }
 
-export const LESSONS: Lesson[] = [...CELL_LESSONS, ...HUMAN_LESSONS, ...PLANT_LESSONS];
+export const LESSONS: Lesson[] = [...CELL_LESSONS, ...HUMAN_LESSONS, ...PLANT_LESSONS, ...GENETICS_LESSONS];
 
 export function lessonsFor(lab: LaboratoryId): Lesson[] {
   return LESSONS.filter((l) => l.laboratoryId === lab);
