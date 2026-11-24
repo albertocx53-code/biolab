@@ -183,9 +183,9 @@ export function poseFiltration(P: number, get: Get) {
 const HY_BOTTOM = -3.2;
 const HY_TOP = 2.3;
 const HY_N = 36;
-const hyR = (t: number) => 0.62 + 0.1 * Math.sin(Math.PI * t * 1.6) - 0.08 * t;
+const hyR = (t: number) => 0.84 + 0.13 * Math.sin(Math.PI * t * 1.6) - 0.1 * t;
 const hyY = (t: number) => HY_BOTTOM + t * (HY_TOP - HY_BOTTOM);
-const BUD_AT = V(0.55, -0.9, -0.12);
+const BUD_AT = V(0.82, -0.9, -0.12);
 
 function hydraProfiles() {
   const outer: Profile = [];
@@ -197,9 +197,9 @@ function hydraProfiles() {
     const y = hyY(t);
     const R = hyR(t) * (i === 0 ? 0.92 : 1);
     outer.push([R, y]);
-    mid1.push([R - 0.11, y]);
-    mid2.push([R - 0.15, y]);
-    inner.push([R - 0.3, y]);
+    mid1.push([R - 0.14, y]);
+    mid2.push([R - 0.2, y]);
+    inner.push([R - 0.4, y]);
   }
   // the hypostome dome closing the top, with the mouth
   for (let k = 1; k <= 10; k++) {
@@ -208,9 +208,9 @@ function hydraProfiles() {
     const y = HY_TOP + Math.sin(a) * 0.75;
     const f = Math.cos(a);
     outer.push([R * f + 0.12 * (1 - f), y]);
-    mid1.push([(R - 0.11) * f + 0.12 * (1 - f), y - 0.06]);
-    mid2.push([(R - 0.15) * f + 0.12 * (1 - f), y - 0.1]);
-    inner.push([(R - 0.3) * f + 0.1 * (1 - f), y - 0.22]);
+    mid1.push([(R - 0.14) * f + 0.12 * (1 - f), y - 0.08]);
+    mid2.push([(R - 0.2) * f + 0.12 * (1 - f), y - 0.13]);
+    inner.push([(R - 0.4) * f + 0.1 * (1 - f), y - 0.3]);
   }
   return { outer, mid1, mid2, inner };
 }
@@ -237,7 +237,7 @@ function hydraTentacles(origin: THREE.Vector3, scale: number, count: number, see
   for (let i = 0; i < count; i++) {
     const a = (i / count) * Math.PI * 2 + 0.3;
     const dir = V(Math.sin(a), 0.35, Math.cos(a)).normalize();
-    const base = origin.clone().addScaledVector(V(Math.sin(a), 0, Math.cos(a)), 0.42 * scale);
+    const base = origin.clone().addScaledVector(V(Math.sin(a), 0, Math.cos(a)), 0.5 * scale);
     const pts = tentacle(base, dir, 3.4 * scale, 1.8 * scale, seed + i);
     body.push(limb(pts, 0.11 * scale, 0.05 * scale, ac('tentaculos')));
     const curve = new THREE.CatmullRomCurve3(pts);
@@ -261,16 +261,27 @@ function hydra(): BuiltModel {
   // a cnidocyte in detail, beside the tentacle: capsule, coiled thread and cnidocil
   const cnido: THREE.BufferGeometry[] = [];
   const at = V(3.6, 0.2, 0.6);
-  cnido.push(organ(0.32, 0.5, 0.32, [at.x, at.y, at.z], ac('cnidocitos')));
+  // capsule (nematocyst) cut open towards the viewer, so the coiled thread shows
+  const capsule = new THREE.SphereGeometry(1, 28, 18, Math.PI * 0.85, Math.PI * 1.3);
+  capsule.scale(0.32, 0.5, 0.32);
+  cnido.push(paint(place(capsule, at), ac('cnidocitos')));
+  cnido.push(paint(place(new THREE.SphereGeometry(0.33, 20, 10, 0, Math.PI * 2, 0, 0.5).scale(1, 0.5, 1), at.clone().add(V(0, 0.44, 0))), '#C5B358'));
   const coil: THREE.Vector3[] = [];
   for (let i = 0; i <= 60; i++) coil.push(at.clone().add(V(Math.cos(i * 0.7) * 0.16, -0.32 + i * 0.011, Math.sin(i * 0.7) * 0.16)));
-  cnido.push(paint(tube(coil, 0.025, false, 160, 5), '#F57F17'));
+  cnido.push(paint(tube(coil, 0.032, false, 160, 6), '#F57F17'));
   cnido.push(paint(place(new THREE.ConeGeometry(0.03, 0.3, 6), at.clone().add(V(0, 0.62, 0))), '#F57F17'));
+  // magnifier: a ring around the enlarged cell and a thin leader line back to one cnidocyte on a tentacle
+  const ring = new THREE.TorusGeometry(0.78, 0.035, 8, 48);
+  cnido.push(paint(place(ring, at.clone().add(V(0, 0.12, 0))), '#90A4AE'));
+  const target = t.cn[Math.round(t.cn.length * 0.08)];
+  const from = at.clone().add(V(0, 0.12, 0)).addScaledVector(target.clone().sub(at).setZ(0).normalize(), 0.78);
+  cnido.push(paint(tube([from, target], 0.015, false, 8, 5), '#90A4AE'));
+  cnido.push(paint(place(new THREE.TorusGeometry(0.13, 0.02, 6, 20), target), '#90A4AE'));
   meshes.push({ id: 'hy-cnidocito-detalhe', structure: 'cnidocitos', geometry: merge(cnido) });
   // the bud (posed by the budding process; built at the origin, pointing +X)
   meshes.push({ id: 'hy-broto', structure: 'broto-hidra', geometry: budBody() });
   meshes.push({ id: 'hy-broto-tent', structure: 'broto-hidra', geometry: budTentacles() });
-  return { meshes: colorize(meshes), anchors: {}, preset: presetFor(21, [-1.6, 0.6, 0], 0.16, 0.35) };
+  return { meshes: colorize(meshes), anchors: {}, preset: presetFor(19, [-1.4, 0.5, 0], 0.16, 0.35) };
 }
 
 function budBody() {
@@ -294,7 +305,7 @@ export function poseHydraBud(P: number, get: Get) {
   const t = P - step;
   const body = get('hy-broto');
   const tent = get('hy-broto-tent');
-  const grow = step === 0 ? 0.25 + 0.2 * smooth(t) : step === 1 ? 0.45 + 0.4 * smooth(t) : 1;
+  const grow = step === 0 ? 0.35 + 0.15 * smooth(t) : step === 1 ? 0.45 + 0.4 * smooth(t) : 1;
   const tentK = step < 2 ? 0 : step === 2 ? 0.25 + 0.75 * smooth(t) : 1;
   const away = step === 3 ? smooth(t) : 0;
   const pos = BUD_AT.clone().add(V(away * 1.6, -away * 1.9, away * 0.4));
@@ -389,11 +400,11 @@ function planarian(): BuiltModel {
 
 // ===================================================================== earthworm
 
-const EW_X0 = -5.6;
+const EW_X0 = -4.0;
 const EW_X1 = 5.6;
 const SEG = 0.34;
-const ewR = (t: number) => 0.6 * Math.pow(Math.sin(Math.PI * Math.min(1, 0.03 + t * 0.95)), 0.35);
-const ewSeg = (x: number) => 1 - 0.07 * Math.pow(Math.abs(Math.cos((Math.PI * (x - EW_X0)) / SEG)), 6);
+const ewR = (t: number) => 0.76 * Math.pow(Math.sin(Math.PI * Math.min(1, 0.03 + t * 0.95)), 0.35);
+const ewSeg = (x: number) => 1 - 0.11 * Math.pow(Math.abs(Math.cos((Math.PI * (x - EW_X0)) / SEG)), 6);
 const CLIT = [1.5, 2.55];
 
 function earthworm(): BuiltModel {
@@ -480,7 +491,7 @@ function earthworm(): BuiltModel {
   meshes.push({ id: 'ew-septos', structure: 'septos', geometry: merge(sept) });
   meshes.push({ id: 'ew-nefridios', structure: 'nefridios', geometry: paint(merge(neph), ac('nefridios')) });
   meshes.push({ id: 'ew-cerdas', structure: 'cerdas', geometry: paint(merge(set), ac('cerdas')) });
-  return { meshes: colorize(meshes), anchors: {}, preset: presetFor(16.5, [-1.5, -0.3, 0], 0.42, 0.1) };
+  return { meshes: colorize(meshes), anchors: {}, preset: presetFor(14.5, [-0.2, -0.3, 0], 0.38, 0.12) };
 }
 
 /** Darker on the back (dorsal vessel shows through), lighter below. */
@@ -490,8 +501,11 @@ function paintGradient(g: THREE.BufferGeometry) {
   const b = new THREE.Color('#A85A66');
   const c = new THREE.Color();
   const col = new Float32Array(p.count * 3);
+  const groove = new THREE.Color('#7E3F4A');
   for (let i = 0; i < p.count; i++) {
-    c.copy(a).lerp(b, smooth(p.getY(i) / 0.6 + 0.5));
+    c.copy(a).lerp(b, smooth(p.getY(i) / 0.76 + 0.5));
+    // darker ring in every groove between segments (annuli)
+    c.lerp(groove, 0.55 * Math.pow(Math.abs(Math.cos((Math.PI * (p.getX(i) - EW_X0)) / SEG)), 10));
     col.set([c.r, c.g, c.b], i * 3);
   }
   g.setAttribute('color', new THREE.BufferAttribute(col, 3));

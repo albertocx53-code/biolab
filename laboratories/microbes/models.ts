@@ -529,7 +529,7 @@ function amoeba(): BuiltModel {
   const ar = rng(7);
   for (let i = 0; i < 7; i++) alga.push(place(new THREE.SphereGeometry(0.22, 12, 10), ar.dir().multiplyScalar(0.25)));
   meshes.push({ id: 'am-alimento', structure: 'alimento', geometry: paint(merge(alga), c('alimento')) });
-  return { meshes: colorize(meshes), anchors: {}, preset: presetFor(15, [0.2, 0, -0.6], 0.62, 0.3) };
+  return { meshes: colorize(meshes), anchors: {}, preset: presetFor(17.5, [0.9, 0, -0.4], 1.0, 0.3) };
 }
 
 /** Phagocytosis: pseudopods surround the food, a food vacuole forms and is digested. */
@@ -582,12 +582,12 @@ export function posePhagocytosis(P: number, get: (id: string) => THREE.Object3D 
 function paramecium(): BuiltModel {
   const r = rng(71);
   const meshes: MeshDef[] = [];
-  const cut: Cut = { center: 0.1, width: Math.PI * 0.62 };
+  const cut: Cut = { center: 0.1, width: 0.001 }; // no cut: the pellicle is translucent instead
   // slipper shape along Y (later laid along X), with an oral groove on one side
   const groove = new THREE.Vector3(0.8, 0.1, 0.6).normalize();
   const body: DistFn = (d) => {
     const yy = d.y;
-    const base = ellipsoid(1.35, 3.6, 1.15)(d) * (1 + 0.12 * Math.sin(yy * 2.2));
+    const base = ellipsoid(1.15, 3.7, 0.98)(d) * (1 + 0.12 * Math.sin(yy * 2.2));
     const g = d.dot(groove);
     return base * (1 - 0.16 * Math.exp(-((1 - g) * (1 - g)) / 0.05) * (yy < 0.3 ? 1 : 0.2));
   };
@@ -595,7 +595,7 @@ function paramecium(): BuiltModel {
   meshes.push({ id: 'pa-pelicula', structure: 'pelicula', geometry: paint(shell(body, cut, seg), c('pelicula')) });
   meshes.push({ id: 'pa-sulco', structure: 'sulco-oral', geometry: paint(patch(scaled(body, 1.004), [1.45, 2.2], [0.75, 1.25], [20, 16]), c('sulco-oral')) });
   // cilia all over the surface
-  meshes.push({ id: 'pa-cilios', structure: 'cilios', geometry: paint(bumps(r, body, 1500, [0.16, 0.24], 0.012, cut), c('cilios')) });
+  meshes.push({ id: 'pa-cilios', structure: 'cilios', geometry: paint(bumps(r, body, 1800, [0.07, 0.11], 0.008, cut), c('cilios')) });
   // trichocysts just under the pellicle
   const tri: THREE.BufferGeometry[] = [];
   for (let i = 0; i < 260 * 3 && tri.length < 260; i++) {
@@ -606,7 +606,7 @@ function paramecium(): BuiltModel {
   }
   meshes.push({ id: 'pa-tricocistos', structure: 'tricocistos', geometry: paint(merge(tri), c('tricocistos')) });
   meshes.push({ id: 'pa-citostoma', structure: 'citostoma', geometry: paint(tube([groove.clone().multiplyScalar(1.05).setY(-0.6), new THREE.Vector3(0.5, -0.7, 0.2), new THREE.Vector3(0.1, -0.5, -0.1)], 0.1, false, 20, 8), c('citostoma')) });
-  meshes.push({ id: 'pa-macronucleo', structure: 'macronucleo', geometry: paint(place(bentCapsule(0.7, 0.42, 0.7, 12, 18), [-0.2, 0.3, -0.2]), c('macronucleo')) });
+  meshes.push({ id: 'pa-macronucleo', structure: 'macronucleo', geometry: paint(place(bentCapsule(0.6, 0.34, 0.8, 12, 18), [-0.2, 0.3, -0.2]), c('macronucleo')) });
   meshes.push({ id: 'pa-micronucleo', structure: 'micronucleo', geometry: paint(place(new THREE.SphereGeometry(0.16, 14, 10), [0.35, 0.65, -0.1]), c('micronucleo')) });
   // two star-shaped contractile vacuoles near the ends
   const cvs: THREE.BufferGeometry[] = [];
@@ -627,9 +627,9 @@ function paramecium(): BuiltModel {
     dv.push(paint(place(new THREE.SphereGeometry(r.range(0.16, 0.24), 14, 10), p), c('vacuolo-digestivo')));
   }
   meshes.push({ id: 'pa-vac-digestivos', structure: 'vacuolo-digestivo', geometry: merge(dv) });
-  meshes.push({ id: 'pa-citoprocto', structure: 'citoprocto', geometry: paint(place(new THREE.TorusGeometry(0.12, 0.04, 8, 16), groove.clone().multiplyScalar(1.12).setY(-2.4), alignY(new THREE.Vector3(1, 0, 0.6))), c('citoprocto')) });
+  meshes.push({ id: 'pa-citoprocto', structure: 'citoprocto', geometry: paint(place(new THREE.TorusGeometry(0.12, 0.04, 8, 16), (() => { const d = new THREE.Vector3(0.7, -1.9, 0.5).normalize(); return d.multiplyScalar(body(d) * 0.98); })(), alignY(new THREE.Vector3(0.7, -0.3, 0.5).normalize())), c('citoprocto')) });
   for (const m of meshes) m.geometry.applyQuaternion(LAY_X);
-  return { meshes: colorize(meshes), anchors: {}, preset: presetFor(13, [-0.9, 0, 0], 0.45, 0.25) };
+  return { meshes: colorize(meshes), anchors: {}, preset: presetFor(11, [-0.6, 0, 0], 0.35, 0.25) };
 }
 
 // ===================================================================== Euglena

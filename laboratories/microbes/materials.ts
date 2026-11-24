@@ -22,7 +22,7 @@ export const MICROBE_MATERIALS: Record<string, MaterialSpec> = Object.fromEntrie
 export const MICROBE_FALLBACK: MaterialSpec = FINISH;
 export const LEGEND_COLOR: Record<string, string> = MICROBE_COLOR;
 /** Translucent by default so the inside of the cells shows. */
-export const DEFAULT_OPACITY: Record<string, number> = { citoplasma: 0.35, capsula: 0.4, 'placa-de-petri': 0.35, antibiotico: 0.55 };
+export const DEFAULT_OPACITY: Record<string, number> = { 'membrana-ameba': 0.42, pseudopode: 0.5, pelicula: 0.38, citoplasma: 0.35, capsula: 0.4, 'placa-de-petri': 0.35, antibiotico: 0.55 };
 
 /** Bakes the structure colour into meshes that have no vertex colours yet. */
 export function colorize(meshes: MeshDef[]): MeshDef[] {

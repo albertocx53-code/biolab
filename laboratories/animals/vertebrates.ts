@@ -186,62 +186,92 @@ function frog(): BuiltModel {
 // ===================================================================== bird
 
 const birdSec = (t: number) => {
-  const b = Math.pow(Math.sin(Math.PI * Math.min(1, 0.03 + t * 0.97)), 0.6);
-  return { y: 0.25 * Math.sin(Math.PI * t) - 0.15 + t * 0.25, ry: 1.3 * b, rz: 1.1 * b };
+  // egg-shaped trunk, deepest at the breast (front third)
+  const b = Math.pow(Math.sin(Math.PI * Math.pow(Math.min(1, 0.02 + t * 0.98), 0.78)), 0.55);
+  return { y: -0.05 + 0.28 * t, ry: 1.18 * b, rz: 0.92 * b };
 };
+
+/** One feather: a slim vane in the XZ plane, pointing along -x from the origin. */
+function feather(len: number, width: number) {
+  return plate([[0, 0], [-len * 0.3, width * 0.5], [-len * 0.85, width * 0.45], [-len, 0], [-len * 0.85, -width * 0.45], [-len * 0.3, -width * 0.5]], 0.035, 6);
+}
+
+/** Folded wing on one side: coverts as a smooth plate plus separate primary feathers. */
+function foldedWing(s: number) {
+  const parts: THREE.BufferGeometry[] = [];
+  const coverts = plate([[1.35, 0.75], [0.4, 0.95], [-0.9, 0.7], [-1.5, 0.2], [-0.8, -0.3], [0.6, -0.35], [1.3, 0.1]], 0.07);
+  parts.push(shade(coverts, '#6B4E2E', '#A27B4F', -0.3, 0.9));
+  // wing bar of pale coverts
+  parts.push(paint(tube([V(0.9, 0.05, 0.05), V(0.0, 0.0, 0.05), V(-0.9, 0.12, 0.05)], 0.06, false, 16, 6), '#E8D8B8'));
+  for (let k = 0; k < 7; k++) {
+    const f = feather(1.6 - k * 0.07, 0.34);
+    f.rotateX(Math.PI / 2).rotateZ(0.18 - k * 0.05);
+    f.translate(-0.7 + k * 0.12, 0.25 - k * 0.075, -0.02 * k);
+    parts.push(paint(f, k % 2 ? '#3F2E1C' : '#55402A'));
+  }
+  const w = merge(parts);
+  // follow the side of the trunk and mirror for the left wing
+  w.rotateX(0.12);
+  if (s < 0) w.scale(1, 1, -1);
+  w.translate(0, 0.08, s * 1.0);
+  return w;
+}
 
 function bird(): BuiltModel {
   const meshes: MeshDef[] = [];
-  const body = loft(-2.3, 2.1, birdSec, 80, 40);
-  const neck = loft(1.35, 2.75, (t) => ({ y: 0.6 + t * 1.55, ry: 0.55 - 0.18 * t, rz: 0.5 - 0.17 * t }), 30, 24);
-  const head = organ(0.62, 0.55, 0.52, [2.95, 2.4, 0], '#ffffff');
-  const tail = plate([[0, 0.3], [-1.9, 0.7], [-2.3, 0.1], [-1.9, -0.55], [0, -0.3]], 0.05);
-  tail.rotateX(Math.PI / 2).rotateZ(0.2).translate(-2.0, 0.1, 0);
-  const wings: THREE.BufferGeometry[] = [];
-  for (const s of [1, -1]) {
-    const w = plate([[0, 0], [-1.0, 0.45], [-3.4, 0.15], [-3.9, -0.3], [-2.4, -0.55], [-0.3, -0.45]], 0.08);
-    w.rotateX(s * 0.18).rotateZ(-0.12).translate(1.4, 0.45, s * 1.12);
-    wings.push(w);
+  const body = loft(-1.95, 1.75, birdSec, 80, 40);
+  const neck = loft(1.15, 2.3, (t) => ({ y: 0.5 + 1.25 * smooth(t), ry: 0.62 - 0.22 * t, rz: 0.46 - 0.12 * t }), 30, 24);
+  const head = organ(0.58, 0.5, 0.46, [2.5, 1.92, 0], '#ffffff');
+  shade(body, '#8C6A43', '#F0E4CC', -0.9, 1.0);
+  shade(neck, '#8C6A43', '#F0E4CC', 0.6, 1.6);
+  shade(head, '#7A5A36', '#E9DCC2', 1.6, 2.4);
+  const tail: THREE.BufferGeometry[] = [];
+  for (let k = -3; k <= 3; k++) {
+    const f = feather(1.75 - Math.abs(k) * 0.08, 0.4);
+    f.rotateX(Math.PI / 2).rotateY(k * 0.11).rotateZ(-0.18);
+    f.translate(-1.65, 0.3, k * 0.045);
+    tail.push(paint(f, Math.abs(k) % 2 ? '#4A3622' : '#6B4E2E'));
   }
-  const feathers = merge([body, neck, head, tail, ...wings]);
-  shade(feathers, '#8C6A43', '#EBDDC4', -1.0, 1.2);
+  const feathers = merge([body, neck, head, ...tail, foldedWing(1), foldedWing(-1)]);
   meshes.push({ id: 'av-penas', structure: 'penas', geometry: feathers });
-  meshes.push({ id: 'av-bico', structure: 'bico', geometry: place(new THREE.ConeGeometry(0.2, 0.75, 16).rotateZ(-Math.PI / 2), [3.75, 2.3, 0]) });
-  meshes.push({ id: 'av-olhos', structure: 'olhos', geometry: merge([organ(0.12, 0.12, 0.08, [3.15, 2.55, 0.44], ac('olhos')), organ(0.12, 0.12, 0.08, [3.15, 2.55, -0.44], ac('olhos'))]) });
+  meshes.push({ id: 'av-bico', structure: 'bico', geometry: merge([place(new THREE.ConeGeometry(0.17, 0.62, 18).scale(1, 1, 0.8).rotateZ(-Math.PI / 2 - 0.12), [3.25, 1.84, 0]), place(new THREE.ConeGeometry(0.13, 0.5, 18).scale(1, 1, 0.8).rotateZ(-Math.PI / 2 + 0.1), [3.18, 1.72, 0])]) });
+  meshes.push({ id: 'av-olhos', structure: 'olhos', geometry: merge([organ(0.13, 0.13, 0.05, [2.72, 2.05, 0.4], '#F2C14E'), organ(0.08, 0.08, 0.05, [2.74, 2.05, 0.43], ac('olhos')), organ(0.13, 0.13, 0.05, [2.72, 2.05, -0.4], '#F2C14E'), organ(0.08, 0.08, 0.05, [2.74, 2.05, -0.43], ac('olhos'))]) });
   const legs: THREE.BufferGeometry[] = [];
   for (const s of [1, -1]) {
-    legs.push(limb([V(-0.1, -1.0, s * 0.45), V(0.25, -1.75, s * 0.5), V(-0.05, -2.75, s * 0.5)], 0.11, 0.06, '#E09F3E'));
-    for (const d of [V(0.55, 0, 0.25), V(0.6, 0, 0), V(0.55, 0, -0.25), V(-0.45, 0, 0)]) legs.push(limb([V(-0.05, -2.75, s * 0.5), V(-0.05, -2.8, s * 0.5).add(d.clone().setZ(d.z * s))], 0.04, 0.03, '#E09F3E'));
+    // thigh is hidden in the body; only the scaly tarsus and the toes show
+    legs.push(limb([V(-0.05, -0.85, s * 0.42), V(0.25, -1.55, s * 0.45), V(0.0, -2.45, s * 0.45)], 0.1, 0.06, '#D98E2B'));
+    for (const d of [V(0.55, 0, 0.25), V(0.62, 0, 0), V(0.55, 0, -0.25), V(-0.42, 0, 0)]) legs.push(limb([V(0.0, -2.45, s * 0.45), V(0.0, -2.52, s * 0.45).add(d.clone().setZ(d.z * s))], 0.04, 0.03, '#D98E2B'));
   }
   meshes.push({ id: 'av-patas', structure: 'patas-vertebrado', geometry: paint(merge(legs), '#E09F3E') });
-  // skeleton: keel of the sternum, vertebral column (long flexible neck)
-  meshes.push({ id: 'av-quilha', structure: 'quilha', geometry: place(plate([[0, 0], [1.6, 0.1], [1.2, -0.75], [-0.3, -0.35]], 0.05), [0.3, -0.55, 0]) });
-  meshes.push({ id: 'av-musculos', structure: 'musculos-peitorais', geometry: merge([organ(0.85, 0.38, 0.26, [1.0, -0.85, 0.3], ac('musculos-peitorais'), E(0.2, 0, -0.3)), organ(0.85, 0.38, 0.26, [1.0, -0.85, -0.3], ac('musculos-peitorais'), E(-0.2, 0, -0.3))]) });
-  meshes.push({ id: 'av-coluna', structure: 'coluna-vertebral', geometry: vertebrae([V(2.85, 2.2, 0), V(2.2, 1.6, 0), V(1.9, 0.9, 0), V(0.8, 0.8, 0), V(-1.0, 0.65, 0), V(-2.1, 0.45, 0)], 0.06, 0.18) });
-  meshes.push({ id: 'av-encefalo', structure: 'encefalo', geometry: merge([organ(0.28, 0.22, 0.2, [2.85, 2.55, 0.14], ac('encefalo')), organ(0.28, 0.22, 0.2, [2.85, 2.55, -0.14], ac('encefalo')), organ(0.14, 0.12, 0.14, [2.55, 2.42, 0], ac('encefalo'))]) });
-  // respiratory: small rigid lungs and air sacs
-  meshes.push({ id: 'av-pulmoes', structure: 'pulmoes', geometry: merge([organ(0.6, 0.22, 0.22, [0.7, 0.5, 0.38], ac('pulmoes')), organ(0.6, 0.22, 0.22, [0.7, 0.5, -0.38], ac('pulmoes'))]) });
+  // skeleton: keel of the sternum and the vertebral column (long flexible neck)
+  meshes.push({ id: 'av-quilha', structure: 'quilha', geometry: place(plate([[0.2, 0], [1.25, 0.15], [0.95, -0.55], [0.2, -0.75], [-0.6, -0.3]], 0.05), [0.05, -0.45, 0]) });
+  meshes.push({ id: 'av-musculos', structure: 'musculos-peitorais', geometry: merge([organ(0.75, 0.34, 0.2, [0.45, -0.6, 0.3], ac('musculos-peitorais'), E(0.25, 0, -0.18)), organ(0.75, 0.34, 0.2, [0.45, -0.6, -0.3], ac('musculos-peitorais'), E(-0.25, 0, -0.18))]) });
+  meshes.push({ id: 'av-coluna', structure: 'coluna-vertebral', geometry: vertebrae([V(2.25, 1.75, 0), V(1.95, 1.25, 0), V(1.55, 0.95, 0), V(0.8, 0.88, 0), V(-0.6, 0.78, 0), V(-1.7, 0.62, 0), V(-2.0, 0.5, 0)], 0.055, 0.16) });
+  meshes.push({ id: 'av-encefalo', structure: 'encefalo', geometry: merge([organ(0.24, 0.2, 0.18, [2.45, 2.05, 0.13], ac('encefalo')), organ(0.24, 0.2, 0.18, [2.45, 2.05, -0.13], ac('encefalo')), organ(0.13, 0.11, 0.13, [2.2, 1.95, 0], ac('encefalo'))]) });
+  // respiratory: small rigid lungs against the back, air sacs in front and behind
+  meshes.push({ id: 'av-pulmoes', structure: 'pulmoes', geometry: merge([organ(0.55, 0.2, 0.2, [0.55, 0.55, 0.32], ac('pulmoes'), E(0, 0, 0.1)), organ(0.55, 0.2, 0.2, [0.55, 0.55, -0.32], ac('pulmoes'), E(0, 0, 0.1))]) });
   meshes.push({
     id: 'av-sacos',
     structure: 'sacos-aereos',
     geometry: merge([
-      organ(0.3, 0.28, 0.25, [1.85, 0.95, 0.25], ac('sacos-aereos')),
-      organ(0.3, 0.28, 0.25, [1.85, 0.95, -0.25], ac('sacos-aereos')),
-      organ(0.45, 0.35, 0.3, [1.4, 0.2, 0.62], ac('sacos-aereos')),
-      organ(0.45, 0.35, 0.3, [1.4, 0.2, -0.62], ac('sacos-aereos')),
-      organ(0.85, 0.42, 0.35, [-0.9, 0.05, 0.6], ac('sacos-aereos')),
-      organ(0.85, 0.42, 0.35, [-0.9, 0.05, -0.6], ac('sacos-aereos')),
+      organ(0.2, 0.2, 0.16, [1.6, 0.95, 0.2], ac('sacos-aereos')),
+      organ(0.2, 0.2, 0.16, [1.6, 0.95, -0.2], ac('sacos-aereos')),
+      organ(0.26, 0.22, 0.3, [1.55, 0.3, 0], ac('sacos-aereos')),
+      organ(0.4, 0.26, 0.22, [-0.05, 0.4, 0.5], ac('sacos-aereos')),
+      organ(0.4, 0.26, 0.22, [-0.05, 0.4, -0.5], ac('sacos-aereos')),
+      organ(0.6, 0.3, 0.26, [-1.0, 0.1, 0.48], ac('sacos-aereos')),
+      organ(0.6, 0.3, 0.26, [-1.0, 0.1, -0.48], ac('sacos-aereos')),
     ]),
   });
-  meshes.push({ id: 'av-coracao', structure: 'coracao', geometry: merge([organ(0.38, 0.48, 0.36, [1.2, -0.05, 0], ac('coracao'), E(0, 0, -0.35)), organ(0.18, 0.16, 0.16, [1.45, 0.38, 0.18], '#3A6EA5'), organ(0.18, 0.16, 0.16, [1.45, 0.38, -0.18], '#C1121F')]) });
-  meshes.push({ id: 'av-papo', structure: 'papo', geometry: organ(0.38, 0.3, 0.38, [2.05, 1.05, 0.1], ac('papo')) });
-  meshes.push({ id: 'av-esofago', structure: 'estomago', geometry: merge([paint(tube([V(2.7, 2.0, 0), V(2.25, 1.4, 0), V(2.05, 1.05, 0), V(1.7, 0.6, 0.05), V(0.9, 0.05, 0.1), V(0.35, -0.15, 0.1)], 0.07, false, 40, 8), ac('estomago')), organ(0.35, 0.18, 0.18, [0.3, -0.15, 0.1], ac('estomago'), E(0, 0, 0.3))]) });
-  meshes.push({ id: 'av-moela', structure: 'moela-ave', geometry: organ(0.42, 0.38, 0.32, [-0.25, -0.45, 0.12], ac('moela-ave')) });
-  meshes.push({ id: 'av-figado', structure: 'figado', geometry: merge([organ(0.55, 0.25, 0.35, [0.6, -0.55, 0.38], ac('figado')), organ(0.55, 0.25, 0.35, [0.6, -0.55, -0.38], ac('figado'))]) });
-  meshes.push({ id: 'av-intestino', structure: 'intestino-vertebrado', geometry: merge([paint(coil(-1.35, -0.6, -0.4, -0.75, -0.1, 3, 0.07), ac('intestino-vertebrado')), paint(tube([V(-1.35, -0.6, 0), V(-1.8, -0.55, 0), V(-2.05, -0.55, 0)], 0.08, false, 10, 8), ac('intestino-vertebrado'))]) });
-  meshes.push({ id: 'av-rins', structure: 'rins', geometry: merge([organ(0.6, 0.1, 0.15, [-0.9, 0.45, 0.2], ac('rins')), organ(0.6, 0.1, 0.15, [-0.9, 0.45, -0.2], ac('rins'))]) });
-  meshes.push({ id: 'av-cloaca', structure: 'cloaca', geometry: organ(0.16, 0.16, 0.18, [-2.15, -0.55, 0], ac('cloaca')) });
-  return { meshes: colorize(meshes), anchors: {}, preset: presetFor(14, [-0.6, 0.2, 0], 0.18, 0.55) };
+  meshes.push({ id: 'av-coracao', structure: 'coracao', geometry: merge([organ(0.3, 0.4, 0.3, [1.2, -0.1, 0], ac('coracao'), E(0, 0, -0.35)), organ(0.15, 0.13, 0.14, [1.38, 0.24, 0.15], '#3A6EA5'), organ(0.15, 0.13, 0.14, [1.38, 0.24, -0.15], '#C1121F')]) });
+  meshes.push({ id: 'av-papo', structure: 'papo', geometry: organ(0.3, 0.26, 0.3, [1.85, 0.95, 0.14], ac('papo')) });
+  meshes.push({ id: 'av-esofago', structure: 'estomago', geometry: merge([paint(tube([V(2.95, 1.8, 0), V(2.4, 1.65, 0.05), V(2.05, 1.25, 0.1), V(1.85, 0.95, 0.14), V(1.5, 0.6, 0.12), V(1.0, 0.3, 0.1)], 0.06, false, 40, 8), ac('estomago')), organ(0.32, 0.16, 0.16, [0.75, 0.2, 0.1], ac('estomago'), E(0, 0, 0.35))]) });
+  meshes.push({ id: 'av-moela', structure: 'moela-ave', geometry: organ(0.38, 0.34, 0.3, [0.2, -0.15, 0.08], ac('moela-ave')) });
+  meshes.push({ id: 'av-figado', structure: 'figado', geometry: merge([organ(0.5, 0.22, 0.3, [0.85, -0.25, 0.34], ac('figado'), E(0, 0, -0.25)), organ(0.5, 0.22, 0.3, [0.85, -0.25, -0.34], ac('figado'), E(0, 0, -0.25))]) });
+  meshes.push({ id: 'av-intestino', structure: 'intestino-vertebrado', geometry: merge([paint(coil(-1.2, -0.35, -0.15, -0.5, 0.0, 3, 0.065), ac('intestino-vertebrado')), paint(tube([V(-1.2, -0.45, 0), V(-1.6, -0.35, 0), V(-1.85, -0.25, 0)], 0.075, false, 10, 8), ac('intestino-vertebrado'))]) });
+  meshes.push({ id: 'av-rins', structure: 'rins', geometry: merge([organ(0.55, 0.1, 0.14, [-0.85, 0.52, 0.18], ac('rins'), E(0, 0, 0.08)), organ(0.55, 0.1, 0.14, [-0.85, 0.52, -0.18], ac('rins'), E(0, 0, 0.08))]) });
+  meshes.push({ id: 'av-cloaca', structure: 'cloaca', geometry: organ(0.15, 0.15, 0.16, [-1.92, -0.22, 0], ac('cloaca')) });
+  return { meshes: colorize(meshes), anchors: {}, preset: presetFor(13.5, [-0.4, 0.05, 0], 0.15, 0.3) };
 }
 
 // ===================================================================== hearts

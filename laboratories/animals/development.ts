@@ -208,7 +208,8 @@ function frogMeta(): BuiltModel {
   const front: THREE.BufferGeometry[] = [];
   for (const s of [1, -1]) {
     hind.push(limb([V(-0.15, -0.35, s * 0.4), V(-0.55, -0.6, s * 0.85), V(-0.15, -0.8, s * 1.05), V(-0.75, -0.9, s * 1.25)], 0.12, 0.06, '#4A4E69'));
-    front.push(limb([V(1.2, -0.45, s * 0.55), V(1.45, -0.75, s * 0.8), V(1.75, -0.85, s * 0.85)], 0.08, 0.05, '#4A4E69'));
+    front.push(limb([V(1.05, -0.35, s * 0.6), V(1.3, -0.85, s * 1.0), V(1.75, -1.1, s * 1.08)], 0.1, 0.065, '#4A4E69'));
+    for (let k = 0; k < 4; k++) front.push(limb([V(1.75, -1.1, s * 1.08), V(2.0 + k * 0.02, -1.15, s * (0.9 + k * 0.12))], 0.03, 0.025, '#4A4E69'));
   }
   meshes.push({ id: 'mf-patas-tras', structure: 'patas-traseiras', geometry: merge(hind) });
   meshes.push({ id: 'mf-patas-diant', structure: 'patas-dianteiras', geometry: merge(front) });
@@ -244,7 +245,7 @@ export function poseFrogMeta(P: number, get: Get) {
   }
   show(get('mf-branquias'), step === 1 ? size : step === 2 ? size * (1 - smooth(t * 1.5)) : 0);
   show(get('mf-patas-tras'), step < 2 ? 0 : step === 2 ? size * (0.3 + 0.7 * smooth(t)) : size);
-  show(get('mf-patas-diant'), step < 3 ? 0 : step === 3 ? size * (0.3 + 0.7 * smooth(t * 1.2)) : size);
+  show(get('mf-patas-diant'), step < 3 ? 0 : step === 3 ? size * (0.5 + 0.5 * smooth(t * 1.2)) : size);
   const frog = get('mf-sapo');
   if (frog) {
     // the young frog climbs out beside the last tadpole stage, then grows

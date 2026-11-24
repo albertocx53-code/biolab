@@ -14,7 +14,7 @@ import { colorize } from './materials';
 
 type Get = (id: string) => THREE.Object3D | undefined;
 
-export const VIRUS_CYCLE_PRESET: CameraPreset = { position: [0.6, 3.2, 21], target: [0.6, 0.8, 0], distance: 21, minDistance: 2, maxDistance: 42 };
+export const VIRUS_CYCLE_PRESET: CameraPreset = { position: [1.0, 2.8, 17.5], target: [1.0, 0.6, 0], distance: 17.5, minDistance: 2, maxDistance: 42 };
 
 const CUT: Cut = { center: 0, width: Math.PI * 0.9 };
 const H = 2.6;
@@ -63,7 +63,7 @@ export function buildVirusCycle() {
     meshes.push({ id: `frag-${i}`, structure: 'parede-bacteriana', geometry: paint(g, c('parede-bacteriana')) });
   }
   // the infecting phage and its DNA once injected
-  meshes.push(...phageMeshes('fago', 0.55, true));
+  meshes.push(...phageMeshes('fago', 0.75, true));
   const inj: THREE.Vector3[] = [];
   for (let i = 0; i <= 40; i++) {
     const t = i / 40;
@@ -90,7 +90,7 @@ export function buildVirusCycle() {
   for (let i = 0; i < 4; i++) ind.push(place(new THREE.IcosahedronGeometry(0.16, 0), [-1.2 + i * 0.7, 0.2 * (i % 2), 0], undefined, new THREE.Vector3(1, 1.4, 1)));
   meshes.push({ id: 'inducao', structure: 'capsideo', geometry: paint(merge(ind), c('capsideo')) });
   // a few free phages around (the first scene shows them approaching)
-  for (let i = 0; i < 2; i++) meshes.push(...phageMeshes(`livre-${i}`, 0.42, false));
+  for (let i = 0; i < 2; i++) meshes.push(...phageMeshes(`livre-${i}`, 0.6, false));
   return { meshes: colorize(meshes) };
 }
 
@@ -150,15 +150,15 @@ function common(get: Get) {
 
 /** Phage approaching and landing (0 ≤ t ≤ 1), then injection (sheath contracts) with t2. */
 function attack(get: Get, t: number, t2: number) {
-  const from = new THREE.Vector3(4.5, 6.5, 0.5);
+  const from = new THREE.Vector3(2.4, 3.3, 0.5);
   const at = from.clone().lerp(LAND, ease(clamp01(t)));
   const sheath = 1 - 0.45 * ease(clamp01(t2));
   setPhage(get, 'fago', at, 0.25 * (1 - clamp01(t)), 1, sheath, 1 - clamp01(t2) * 0.999);
   const inj = get('dna-injetado');
   if (inj) inj.scale.setScalar(t2 > 0 ? Math.max(0.0001, ease(clamp01(t2))) : 0.0001);
   if (inj && t2 > 0) inj.position.set(LAND.x * (1 - ease(clamp01(t2))), LAND.y * (1 - ease(clamp01(t2))), 0);
-  setPhage(get, 'livre-0', new THREE.Vector3(-5.5 + t * 0.8, 4.6 - t * 0.4, -1.2), -0.5, 1);
-  setPhage(get, 'livre-1', new THREE.Vector3(6.6, -3.2 + t * 0.5, -1.5), 2.6, 1);
+  setPhage(get, 'livre-0', new THREE.Vector3(-3.4 + t * 0.5, 2.9 - t * 0.3, -1.0), -0.5, 1);
+  setPhage(get, 'livre-1', new THREE.Vector3(4.4, -2.3 + t * 0.4, -1.2), 2.6, 1);
 }
 
 /** Lytic cycle (5 steps). */
@@ -188,7 +188,7 @@ export function poseLytic(P: number, get: Get) {
     if (step === 3) setPhage(get, `novo-${i}`, new THREE.Vector3(0, 0, 0), 0, 0.6 + 0.4 * ease(t));
     if (step === 4) {
       const dir = new THREE.Vector3(-2.6 + i * 1.05, i % 2 ? 1 : -1, (i % 3) - 1).normalize();
-      setPhage(get, `novo-${i}`, dir.multiplyScalar(ease(t) * 4.5), (i - 2.5) * 0.4 * t, 1);
+      setPhage(get, `novo-${i}`, dir.multiplyScalar(ease(t) * 3.8), (i - 2.5) * 0.4 * t, 1);
     }
   }
   if (step === 4) {
@@ -198,15 +198,15 @@ export function poseLytic(P: number, get: Get) {
       const f = get(`frag-${i}`);
       if (!f) continue;
       const dir = new THREE.Vector3(i % 4 < 2 ? -1 : 1, i % 2 ? 1 : -1, (i % 3) - 1).normalize();
-      f.scale.setScalar(1);
-      f.position.copy(dir.multiplyScalar(ease(t) * 2.2));
+      f.scale.setScalar(1 - 0.25 * ease(t));
+      f.position.copy(dir.multiplyScalar(ease(t) * 1.7));
       f.rotation.set(t * (i - 3) * 0.3, t * 0.5, t * (i % 3) * 0.3);
     }
     const coat = get('fago-cabeca');
-    if (coat) coat.position.y += ease(t) * 2;
+    if (coat) coat.position.y += ease(t) * 0.9;
     for (const part of ['bainha', 'cauda']) {
       const o = get(`fago-${part}`);
-      if (o) o.position.y += ease(t) * 2;
+      if (o) o.position.y += ease(t) * 0.9;
     }
   }
 }
