@@ -4,6 +4,7 @@
  * BioLab 3D; every mesh is painted with vertex colours.
  */
 import * as THREE from 'three';
+import { grasshopper } from './grasshopper';
 import { dots, ellipsoid, merge, paint, place, rng, shell, tube, wobble } from '@/laboratories/shared/geometry';
 import { presetFor, type BuiltModel, type MeshDef } from '@/laboratories/shared/types';
 import { ac, lathe, latheCutFaces, limb, loft, organ, plate, slab, smooth, V, type Profile } from './kit';
@@ -513,67 +514,6 @@ function paintGradient(g: THREE.BufferGeometry) {
 }
 
 // ===================================================================== grasshopper
-
-function grasshopper(): BuiltModel {
-  const meshes: MeshDef[] = [];
-  // head: tall, slightly tilted down at the front
-  meshes.push({ id: 'gh-cabeca', structure: 'cabeca', geometry: merge([organ(0.78, 0.95, 0.72, [3.35, 0.55, 0], ac('cabeca'), new THREE.Euler(0, 0, -0.35)), organ(0.45, 0.4, 0.5, [3.75, -0.15, 0], ac('cabeca'))]) });
-  meshes.push({ id: 'gh-olhos', structure: 'olhos-compostos', geometry: merge([organ(0.3, 0.42, 0.18, [3.45, 0.85, 0.62], ac('olhos-compostos'), new THREE.Euler(0, 0, -0.3)), organ(0.3, 0.42, 0.18, [3.45, 0.85, -0.62], ac('olhos-compostos'), new THREE.Euler(0, 0, -0.3)), organ(0.05, 0.05, 0.05, [3.95, 1.15, 0], '#3E2723')]) });
-  const ant: THREE.BufferGeometry[] = [];
-  for (const s of [1, -1]) ant.push(tube([V(3.75, 1.2, s * 0.32), V(4.1, 2.0, s * 0.55), V(3.7, 2.9, s * 0.9), V(2.8, 3.4, s * 1.2)], 0.035, false, 60, 6));
-  meshes.push({ id: 'gh-antenas', structure: 'antenas', geometry: paint(merge(ant), ac('antenas')) });
-  const mouth: THREE.BufferGeometry[] = [organ(0.18, 0.14, 0.3, [3.85, -0.6, 0], ac('aparelho-bucal'))];
-  for (const s of [1, -1]) {
-    mouth.push(organ(0.14, 0.2, 0.12, [3.85, -0.5, s * 0.22], '#5D4037', new THREE.Euler(0, 0, 0.3)));
-    mouth.push(limb([V(3.8, -0.55, s * 0.32), V(3.95, -0.85, s * 0.38), V(3.75, -1.05, s * 0.4)], 0.04, 0.03, ac('aparelho-bucal')));
-  }
-  meshes.push({ id: 'gh-boca', structure: 'aparelho-bucal', geometry: merge(mouth) });
-  // thorax: saddle-shaped pronotum and the two wing-bearing segments
-  meshes.push({ id: 'gh-torax', structure: 'torax', geometry: merge([organ(0.85, 0.82, 0.78, [2.05, 0.45, 0], ac('torax')), organ(0.7, 0.72, 0.7, [1.15, 0.38, 0], '#7CB342')]) });
-  // abdomen: 10 tapering segments
-  const abd: THREE.BufferGeometry[] = [];
-  const sp: THREE.Vector3[] = [V(2.0, 0.2, 0.74), V(2.0, 0.2, -0.74), V(1.2, 0.2, 0.68), V(1.2, 0.2, -0.68)];
-  for (let i = 0; i < 10; i++) {
-    const x = 0.45 - i * 0.48;
-    const r = 0.62 * (1 - i * 0.055);
-    abd.push(organ(0.32, r, r * 0.9, [x, 0.3 - i * 0.04, 0], i % 2 ? '#7CB342' : ac('abdome')));
-    if (i < 8) sp.push(V(x, 0.18 - i * 0.04, r * 0.88), V(x, 0.18 - i * 0.04, -r * 0.88));
-  }
-  abd.push(organ(0.25, 0.12, 0.12, [-4.4, 0.0, 0], '#558B2F'));
-  meshes.push({ id: 'gh-abdome', structure: 'abdome', geometry: merge(abd) });
-  meshes.push({ id: 'gh-espiraculos', structure: 'espiraculos', geometry: paint(dots(sp, 0.055, 1), ac('espiraculos')) });
-  // legs: two short pairs and the long jumping hind pair
-  const legs: THREE.BufferGeometry[] = [];
-  for (const s of [1, -1]) {
-    legs.push(limb([V(2.2, -0.15, s * 0.45), V(2.5, -0.7, s * 0.9), V(2.75, -1.5, s * 1.0), V(3.1, -1.85, s * 1.05)], 0.09, 0.05, ac('patas')));
-    legs.push(limb([V(1.3, -0.15, s * 0.45), V(1.2, -0.75, s * 1.0), V(0.95, -1.55, s * 1.15), V(0.75, -1.85, s * 1.2)], 0.09, 0.05, ac('patas')));
-    // hind leg: thick femur up and back, long tibia down to the ground, tarsus
-    legs.push(organ(1.25, 0.3, 0.2, [0.1, 0.35, s * 0.85], ac('patas'), new THREE.Euler(0, 0, -0.42)));
-    legs.push(limb([V(-1.05, 0.88, s * 0.9), V(-0.2, -0.5, s * 1.0), V(0.4, -1.75, s * 1.05)], 0.08, 0.05, '#8BC34A'));
-    legs.push(limb([V(0.4, -1.75, s * 1.05), V(-0.1, -1.85, s * 1.08), V(-0.45, -1.88, s * 1.1)], 0.05, 0.04, '#689F38'));
-  }
-  meshes.push({ id: 'gh-patas', structure: 'patas', geometry: merge(legs) });
-  // wings: leathery forewings folded over the back; one membranous hindwing spread (far side)
-  const wings: THREE.BufferGeometry[] = [];
-  for (const s of [1, -1]) {
-    const fw = plate([[0, 0], [-1.6, 0.18], [-3.9, 0.1], [-4.6, -0.12], [-3.8, -0.35], [-1.4, -0.28]], 0.03);
-    fw.rotateX(Math.PI / 2 + s * 0.42).translate(1.45, 0.95, s * 0.28);
-    wings.push(paint(fw, '#9CB86B'));
-  }
-  const hw = new THREE.CircleGeometry(2.9, 28, Math.PI * 0.55, Math.PI * 0.55);
-  hw.rotateX(-Math.PI / 2).rotateZ(-0.35).rotateY(-0.25).translate(1.2, 1.05, -0.4);
-  const veins: THREE.BufferGeometry[] = [];
-  for (let k = 0; k <= 10; k++) {
-    const a = Math.PI * 0.55 + (k / 10) * Math.PI * 0.55;
-    const tip = V(Math.cos(a) * 2.85, 0, -Math.sin(a) * 2.85);
-    const g = tube([V(0, 0.01, 0), tip], 0.015, false, 4, 4);
-    g.rotateZ(-0.35).rotateY(-0.25).translate(1.2, 1.05, -0.4);
-    veins.push(paint(g, '#7E9A5B'));
-  }
-  wings.push(paint(hw, ac('asas')), ...veins);
-  meshes.push({ id: 'gh-asas', structure: 'asas', geometry: merge(wings) });
-  return { meshes: colorize(meshes), anchors: {}, preset: presetFor(13.5, [-0.2, 0.4, 0], 0.32, 0.55) };
-}
 
 // ===================================================================== sea star
 

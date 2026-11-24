@@ -7,13 +7,14 @@ import * as THREE from 'three';
 import { ellipsoid, merge, paint, place, tube, wall, type Cut } from '@/laboratories/shared/geometry';
 import { presetFor, type BuiltModel, type MeshDef } from '@/laboratories/shared/types';
 import { ac, limb, loft, organ, plate, smooth, V } from './kit';
+import { fish } from './fish';
 import { colorize } from './materials';
 
 type Get = (id: string) => THREE.Object3D | undefined;
 const E = (x: number, y: number, z: number) => new THREE.Euler(x, y, z);
 
 /** Gut coil: a tube that loops back and forth inside a box. */
-function coil(x0: number, x1: number, y0: number, y1: number, z: number, turns: number, r: number) {
+export function coil(x0: number, x1: number, y0: number, y1: number, z: number, turns: number, r: number) {
   const pts: THREE.Vector3[] = [];
   for (let i = 0; i <= turns * 16; i++) {
     const s = i / (turns * 16);
@@ -23,7 +24,7 @@ function coil(x0: number, x1: number, y0: number, y1: number, z: number, turns: 
   return tube(pts, r, false, turns * 60, 8);
 }
 
-function vertebrae(points: THREE.Vector3[], r: number, every: number) {
+export function vertebrae(points: THREE.Vector3[], r: number, every: number) {
   const curve = new THREE.CatmullRomCurve3(points);
   const len = curve.getLength();
   const parts: THREE.BufferGeometry[] = [];
@@ -41,78 +42,8 @@ function vertebrae(points: THREE.Vector3[], r: number, every: number) {
 
 // ===================================================================== fish
 
-const fishSec = (t: number) => {
-  const body = Math.pow(Math.sin(Math.PI * Math.min(1, t * 1.02)), 0.62);
-  const ped = t < 0.22 ? 0.26 * (1 - t / 0.22) : 0;
-  return { y: 0.05 * Math.sin(Math.PI * t), ry: Math.max(ped, 1.45 * body), rz: Math.max(ped * 0.6, 0.72 * body) };
-};
-
-function fish(): BuiltModel {
-  const meshes: MeshDef[] = [];
-  const X0 = -4.2;
-  const X1 = 4.2;
-  const skin = loft(X0, X1, fishSec, 120, 40);
-  // countershading: darker blue back, silvery belly
-  shade(skin, '#3E6E99', '#DCE7F0', -1.2, 1.3);
-  meshes.push({ id: 'pe-pele', structure: 'pele-peixe', geometry: skin });
-  const fins: THREE.BufferGeometry[] = [];
-  const tail = plate([[0, 0], [-1.3, 1.5], [-1.85, 1.65], [-1.25, 0.1], [-1.85, -1.55], [-1.3, -1.45]], 0.05);
-  fins.push(place(tail, [X0 + 0.2, 0.02, 0]));
-  fins.push(place(plate([[0, 0], [0.6, 1.25], [1.6, 1.0], [2.3, 0.05]], 0.04), [-0.9, 1.3, 0]));
-  fins.push(place(plate([[0, 0], [0.3, -0.9], [1.2, -0.6], [1.5, 0]], 0.04), [-2.4, -0.88, 0]));
-  for (const s of [1, -1]) {
-    fins.push(place(plate([[0, 0], [-1.1, 0.35], [-1.3, -0.1], [-0.6, -0.4]], 0.035), [2.0, -0.35, s * 0.55], new THREE.Quaternion().setFromEuler(E(s * -0.5, s * 0.5, -0.2))));
-    fins.push(place(plate([[0, 0], [-0.9, -0.25], [-1.0, -0.55], [-0.3, -0.3]], 0.035), [0.5, -1.25, s * 0.3], new THREE.Quaternion().setFromEuler(E(s * -0.35, 0, 0))));
-  }
-  meshes.push({ id: 'pe-nadadeiras', structure: 'nadadeiras', geometry: paint(merge(fins), ac('nadadeiras')) });
-  // lateral line on both flanks
-  const ll: THREE.BufferGeometry[] = [];
-  for (const s of [1, -1]) {
-    const pts: THREE.Vector3[] = [];
-    for (let i = 0; i <= 30; i++) {
-      const t = 0.08 + (i / 30) * 0.74;
-      const sec = fishSec(t);
-      pts.push(V(X0 + t * (X1 - X0), sec.y + sec.ry * 0.28, s * sec.rz * 0.97));
-    }
-    ll.push(tube(pts, 0.035, false, 90, 5));
-  }
-  meshes.push({ id: 'pe-linha-lateral', structure: 'linha-lateral', geometry: paint(merge(ll), ac('linha-lateral')) });
-  meshes.push({ id: 'pe-olhos', structure: 'olhos', geometry: merge([organ(0.27, 0.27, 0.1, [3.35, 0.3, 0.36], '#D9D9D9'), organ(0.17, 0.17, 0.08, [3.37, 0.3, 0.43], ac('olhos')), organ(0.27, 0.27, 0.1, [3.35, 0.3, -0.36], '#D9D9D9'), organ(0.17, 0.17, 0.08, [3.37, 0.3, -0.43], ac('olhos'))]) });
-  // four gill arches with filaments on each side
-  const gills: THREE.BufferGeometry[] = [];
-  for (let k = 0; k < 4; k++) {
-    const x = 2.55 - k * 0.2;
-    for (const s of [1, -1]) {
-      const arc: THREE.Vector3[] = [];
-      for (let i = 0; i <= 10; i++) {
-        const a = -1.2 + (i / 10) * 2.2;
-        arc.push(V(x - Math.cos(a) * 0.1, Math.sin(a) * 0.62 - 0.1, s * (0.18 + Math.cos(a) * 0.22)));
-      }
-      gills.push(tube(arc, 0.04, false, 30, 6));
-      for (let i = 1; i < 10; i++) gills.push(tube([arc[i], arc[i].clone().add(V(-0.18, 0, s * 0.1))], 0.022, false, 2, 4));
-    }
-  }
-  meshes.push({ id: 'pe-branquias', structure: 'branquias', geometry: paint(merge(gills), ac('branquias')) });
-  meshes.push({ id: 'pe-coracao', structure: 'coracao', geometry: merge([organ(0.25, 0.2, 0.2, [2.05, -0.75, 0], ac('coracao')), organ(0.22, 0.17, 0.18, [1.85, -0.52, 0], '#6D597A')]) });
-  meshes.push({ id: 'pe-figado', structure: 'figado', geometry: organ(0.75, 0.32, 0.45, [1.35, -0.45, 0.05], ac('figado'), E(0, 0, -0.2)) });
-  meshes.push({ id: 'pe-estomago', structure: 'estomago', geometry: organ(0.55, 0.26, 0.3, [0.65, -0.35, -0.12], ac('estomago'), E(0, 0, 0.15)) });
-  meshes.push({ id: 'pe-intestino', structure: 'intestino-vertebrado', geometry: merge([paint(coil(-1.4, 0.2, -0.85, -0.55, 0, 3, 0.09), ac('intestino-vertebrado')), paint(tube([V(-1.4, -0.6, 0), V(-1.9, -0.85, 0), V(-2.15, -1.0, 0)], 0.08, false, 12, 8), ac('intestino-vertebrado'))]) });
-  meshes.push({ id: 'pe-bexiga', structure: 'bexiga-natatoria', geometry: organ(1.65, 0.38, 0.36, [-0.4, 0.28, 0], ac('bexiga-natatoria'), E(0, 0, -0.04)) });
-  meshes.push({ id: 'pe-rins', structure: 'rins', geometry: organ(1.9, 0.1, 0.14, [0.0, 0.72, 0], ac('rins')) });
-  meshes.push({ id: 'pe-encefalo', structure: 'encefalo', geometry: merge([organ(0.15, 0.1, 0.1, [3.45, 0.42, 0], ac('encefalo')), organ(0.14, 0.1, 0.13, [3.2, 0.46, 0], ac('encefalo')), organ(0.15, 0.1, 0.1, [2.95, 0.46, 0], ac('encefalo'))]) });
-  const spinePts = [V(X0 + 0.3, 0.05, 0), V(-1.5, 0.82, 0), V(1.0, 0.95, 0), V(2.75, 0.75, 0)];
-  const ribs: THREE.BufferGeometry[] = [vertebrae(spinePts, 0.07, 0.2)];
-  for (let x = -1.6; x < 1.8; x += 0.3)
-    for (const s of [1, -1]) {
-      const sec = fishSec((x - X0) / (X1 - X0));
-      ribs.push(paint(tube([V(x, 0.85, s * 0.06), V(x - 0.05, 0.2, s * sec.rz * 0.85), V(x - 0.15, -0.5, s * sec.rz * 0.7)], 0.018, false, 12, 4), ac('coluna-vertebral')));
-    }
-  meshes.push({ id: 'pe-coluna', structure: 'coluna-vertebral', geometry: merge(ribs) });
-  return { meshes: colorize(meshes), anchors: {}, preset: presetFor(15.5, [-1.5, 0.1, 0], 0.18, 0.18) };
-}
-
 /** Vertical colour gradient (dark back, light belly). */
-function shade(g: THREE.BufferGeometry, top: string, bottom: string, y0: number, y1: number) {
+export function shade(g: THREE.BufferGeometry, top: string, bottom: string, y0: number, y1: number) {
   const p = g.getAttribute('position');
   const a = new THREE.Color(bottom);
   const b = new THREE.Color(top);
