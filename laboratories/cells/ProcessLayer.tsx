@@ -246,30 +246,39 @@ function Osmosis() {
 
 // ------------------------------------------------------------------ flagellum
 
+/** Spins every flagellum (`flagelo-N`) about its own axis, like the rotary motor in the envelope does. */
 function FlagellumSpin({ anchors }: { anchors: Anchors }) {
-  const [base, tip] = anchors.flagellumAxis ?? [new THREE.Vector3(), new THREE.Vector3(1, 0, 0)];
-  const axis = useMemo(() => tip.clone().sub(base).normalize(), [base, tip]);
+  const axes = useMemo(() => {
+    const pts = anchors.flagella ?? anchors.flagellumAxis ?? [];
+    const out: { id: string; base: THREE.Vector3; axis: THREE.Vector3 }[] = [];
+    for (let i = 0; i + 1 < pts.length; i += 2) out.push({ id: `flagelo-${i / 2 + 1}`, base: pts[i], axis: pts[i + 1].clone().sub(pts[i]).normalize() });
+    return out;
+  }, [anchors]);
   const angle = useRef(0);
   useEffect(
     () => () => {
-      const m = meshRegistry.get('flagelo-bacteriano');
-      if (m) {
-        m.position.set(0, 0, 0);
-        m.quaternion.identity();
-        m.updateMatrixWorld();
+      for (const { id } of axes) {
+        const m = meshRegistry.get(id);
+        if (m) {
+          m.position.set(0, 0, 0);
+          m.quaternion.identity();
+          m.updateMatrixWorld();
+        }
       }
     },
-    [],
+    [axes],
   );
   useFrame((_, dt) => {
-    const m = meshRegistry.get('flagelo-bacteriano');
-    if (!m) return;
     if (useProcess.getState().playing) angle.current += dt * 5;
-    const q = new THREE.Quaternion().setFromAxisAngle(axis, angle.current);
-    m.quaternion.copy(q);
-    // rotate about the line through `base`, not about the origin
-    m.position.copy(base).sub(base.clone().applyQuaternion(q));
-    m.updateMatrixWorld();
+    axes.forEach(({ id, base, axis }, k) => {
+      const m = meshRegistry.get(id);
+      if (!m) return;
+      const q = new THREE.Quaternion().setFromAxisAngle(axis, angle.current * (k % 2 ? -1 : 1));
+      m.quaternion.copy(q);
+      // rotate about the line through `base`, not about the origin
+      m.position.copy(base).sub(base.clone().applyQuaternion(q));
+      m.updateMatrixWorld();
+    });
   });
   return null;
 }
@@ -277,7 +286,7 @@ function FlagellumSpin({ anchors }: { anchors: Anchors }) {
 /** Renders the animation for the active process inside the canvas. */
 export function ProcessLayer({ anchors }: { anchors: Anchors; modelId?: string }) {
   const id = useProcess((s) => s.id);
-  if (!id || id === 'mitose') return null;
+  if (!id || id === 'mitose' || id === 'meiose' || id === 'fissao') return null;
   return (
     <group key={id}>
       {id === 'secrecao' && <Secretion anchors={anchors} />}

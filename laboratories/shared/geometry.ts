@@ -12,6 +12,7 @@
  */
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { segs } from '@/engine/performance/quality';
 
 export type DistFn = (d: THREE.Vector3) => number;
 
@@ -109,25 +110,51 @@ export function surfacePoint(dist: DistFn, theta: number, phi: number) {
   return d.multiplyScalar(dist(d));
 }
 
-/** Surface shell of a star-shaped solid, with an optional wedge removed. */
-export function shell(dist: DistFn, cut: Cut = NO_CUT, seg: [number, number] = [72, 40]): THREE.BufferGeometry {
-  const [ws, hs] = seg;
+/** Grid resolution of a shell for the given authored segments and cut (detail-scaled). */
+function shellGrid(cut: Cut, seg: [number, number]) {
+  const ws = segs(seg[0], 12);
+  const hs = segs(seg[1], 8);
   const open = cut.width > 0;
   const phi0 = open ? cut.center + cut.width / 2 : 0;
   const phiLen = open ? Math.PI * 2 - cut.width : Math.PI * 2;
   const cols = open ? Math.max(8, Math.round((ws * phiLen) / (Math.PI * 2))) : ws;
-  const pos: number[] = [];
-  const idx: number[] = [];
-  const d = new THREE.Vector3();
+  return { hs, open, phi0, phiLen, cols };
+}
+
+/** Number of floats a shell's position attribute takes (see `fillShell`). */
+export function shellFloats(cut: Cut, seg: [number, number]) {
+  const { hs, cols } = shellGrid(cut, seg);
+  return (hs + 1) * (cols + 1) * 3;
+}
+
+/** Writes the vertex positions of a shell into `out` at `off`; returns the next offset. */
+export function fillShell(out: Float32Array, off: number, dist: DistFn, cut: Cut, seg: [number, number]) {
+  const { hs, phi0, phiLen, cols } = shellGrid(cut, seg);
+  const d = _d;
+  let k = off;
   for (let j = 0; j <= hs; j++) {
     const theta = (j / hs) * Math.PI;
     for (let i = 0; i <= cols; i++) {
       const phi = phi0 + (i / cols) * phiLen;
       dirAt(theta, phi, d);
       const r = dist(d);
-      pos.push(d.x * r, d.y * r, d.z * r);
+      out[k++] = d.x * r;
+      out[k++] = d.y * r;
+      out[k++] = d.z * r;
     }
   }
+  return k;
+}
+
+/**
+ * Surface shell of a star-shaped solid, with an optional wedge removed.
+ * Segment counts follow the active quality profile (see `segs`).
+ */
+export function shell(dist: DistFn, cut: Cut = NO_CUT, seg: [number, number] = [72, 40]): THREE.BufferGeometry {
+  const { hs, open, cols } = shellGrid(cut, seg);
+  const pos = new Float32Array((hs + 1) * (cols + 1) * 3);
+  fillShell(pos, 0, dist, cut, seg);
+  const idx: number[] = [];
   const row = cols + 1;
   for (let j = 0; j < hs; j++)
     for (let i = 0; i < cols; i++) {
@@ -136,7 +163,7 @@ export function shell(dist: DistFn, cut: Cut = NO_CUT, seg: [number, number] = [
       idx.push(a, b, a + 1, b, b + 1, a + 1);
     }
   const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   g.setIndex(idx);
   g.computeVertexNormals();
   if (!open) fixSeamNormals(g, row, hs);
@@ -160,28 +187,44 @@ function fixSeamNormals(g: THREE.BufferGeometry, row: number, hs: number) {
  * The two flat faces exposed by a wedge cut: the region between an inner
  * shape (or the cut axis) and an outer shape, on both cut planes.
  */
-export function cutFaces(outer: DistFn, inner: DistFn | null, cut: Cut, hs = 40): THREE.BufferGeometry {
+/** Writes the positions of one cut face (2 vertices per row) into `out`; returns the next offset. */
+function fillCutFace(out: Float32Array, off: number, outer: DistFn, inner: DistFn | null, phi: number, hs: number) {
+  const d = _d;
+  let k = off;
+  for (let j = 0; j <= hs; j++) {
+    const theta = (j / hs) * Math.PI;
+    dirAt(theta, phi, d);
+    const ro = outer(d);
+    out[k++] = d.x * ro;
+    out[k++] = d.y * ro;
+    out[k++] = d.z * ro;
+    if (inner) {
+      const ri = inner(d);
+      out[k++] = d.x * ri;
+      out[k++] = d.y * ri;
+      out[k++] = d.z * ri;
+    } else {
+      out[k++] = 0;
+      out[k++] = d.y * ro;
+      out[k++] = 0;
+    }
+  }
+  return k;
+}
+
+export function cutFaces(outer: DistFn, inner: DistFn | null, cut: Cut, hsAuthored = 40): THREE.BufferGeometry {
+  const hs = segs(hsAuthored, 8);
   const faces: THREE.BufferGeometry[] = [];
   for (const phi of [cut.center - cut.width / 2, cut.center + cut.width / 2]) {
-    const pos: number[] = [];
+    const pos = new Float32Array((hs + 1) * 2 * 3);
+    fillCutFace(pos, 0, outer, inner, phi, hs);
     const idx: number[] = [];
-    const d = new THREE.Vector3();
-    for (let j = 0; j <= hs; j++) {
-      const theta = (j / hs) * Math.PI;
-      dirAt(theta, phi, d);
-      const ro = outer(d);
-      pos.push(d.x * ro, d.y * ro, d.z * ro);
-      if (inner) {
-        const ri = inner(d);
-        pos.push(d.x * ri, d.y * ri, d.z * ri);
-      } else pos.push(0, d.y * ro, 0);
-    }
     for (let j = 0; j < hs; j++) {
       const a = j * 2;
       idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
     }
     const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     g.setIndex(idx);
     g.computeVertexNormals();
     faces.push(g);
@@ -193,6 +236,30 @@ export function cutFaces(outer: DistFn, inner: DistFn | null, cut: Cut, hs = 40)
 export function wall(dist: DistFn, kInner: number, cut: Cut, seg: [number, number] = [72, 40]) {
   const inner = scaled(dist, kInner);
   return merge([shell(dist, cut, seg), shell(inner, cut, seg), cutFaces(dist, inner, cut, seg[1])]);
+}
+
+/**
+ * Rewrites the positions of a geometry built by `wall(...)` for a new shape,
+ * without allocating: same vertex order as `wall` (outer shell, inner shell,
+ * two cut faces). Returns false when the topology does not match (then the
+ * caller should rebuild instead).
+ */
+export function refillWall(geo: THREE.BufferGeometry, dist: DistFn, kInner: number, cut: Cut, seg: [number, number] = [72, 40]) {
+  const attr = geo.getAttribute('position') as THREE.BufferAttribute;
+  const out = attr.array as Float32Array;
+  const hs = segs(seg[1], 8);
+  const expected = shellFloats(cut, seg) * 2 + (hs + 1) * 2 * 3 * 2;
+  if (out.length !== expected) return false;
+  const inner = scaled(dist, kInner);
+  let k = fillShell(out, 0, dist, cut, seg);
+  k = fillShell(out, k, inner, cut, seg);
+  k = fillCutFace(out, k, dist, inner, cut.center - cut.width / 2, hs);
+  fillCutFace(out, k, dist, inner, cut.center + cut.width / 2, hs);
+  attr.needsUpdate = true;
+  geo.computeVertexNormals();
+  geo.computeBoundingBox();
+  geo.computeBoundingSphere();
+  return true;
 }
 
 // ---------------------------------------------------------------- helpers
@@ -266,9 +333,9 @@ export function dots(points: THREE.Vector3[], radius: number | ((i: number) => n
 }
 
 /** Smooth tube through points (chromatin, ER tubules, DNA). */
-export function tube(points: THREE.Vector3[], radius: number, closed = false, segs = 0, radial = 6) {
+export function tube(points: THREE.Vector3[], radius: number, closed = false, tubular = 0, radial = 6) {
   const curve = new THREE.CatmullRomCurve3(points, closed, 'centripetal');
-  return new THREE.TubeGeometry(curve, segs || points.length * 8, radius, radial, closed);
+  return new THREE.TubeGeometry(curve, segs(tubular || points.length * 8, 4), radius, segs(radial, 4), closed);
 }
 
 /** Random walk constrained to stay inside a shape (for tangled strands). */
@@ -376,7 +443,8 @@ export function slicedCapsule(h: number, r: number, outerColor: string, innerCol
 
 /** A curved sheet: part of a shape's surface between angle ranges (ER cisternae). */
 export function patch(dist: DistFn, theta: [number, number], phi: [number, number], seg: [number, number] = [24, 16], ripple = 0, seed = 0) {
-  const [ws, hs] = seg;
+  const ws = segs(seg[0], 6);
+  const hs = segs(seg[1], 4);
   const pos: number[] = [];
   const idx: number[] = [];
   const d = new THREE.Vector3();
@@ -419,4 +487,88 @@ export function loop(radius: number, r: Rng, n = 14) {
     const rr = radius * (1 + r.range(-0.18, 0.18));
     return new THREE.Vector3(Math.cos(a) * rr, r.range(-0.15, 0.15) * radius, Math.sin(a) * rr);
   });
+}
+
+/** Multi-octave organic irregularity (large lobes plus fine ripples), deterministic. */
+export const wobble2 =
+  (base: DistFn, amp: number, seed = 1, fine = 0.3): DistFn =>
+  (d) => {
+    const s = seed * 2.3;
+    const n1 =
+      Math.sin(1.9 * d.x + s) * Math.sin(1.6 * d.y + 0.7 * s) * Math.cos(2.2 * d.z - s) +
+      0.6 * Math.sin(3.4 * d.x - 1.1 * s + 2.0 * d.z) * Math.cos(2.9 * d.y + s) +
+      0.35 * Math.sin(5.1 * d.y + 3.8 * d.z + s);
+    const n2 = Math.sin(9.3 * d.x + 2 * s) * Math.sin(8.1 * d.y - s) * Math.cos(10.7 * d.z + s) + 0.5 * Math.sin(13.1 * d.x + 11.3 * d.z - s) * Math.cos(12.7 * d.y + 2 * s);
+    return base(d) * (1 + amp * (n1 + fine * n2));
+  };
+
+/**
+ * Short rounded protrusions standing on the surface of a shape (microvilli,
+ * pili, surface granules). Skips the removed wedge so the cut stays clean.
+ */
+export function bumps(r: Rng, dist: DistFn, count: number, len: [number, number], radius: number, avoid: Cut | null, keep?: (d: THREE.Vector3) => boolean): THREE.BufferGeometry {
+  const parts: THREE.BufferGeometry[] = [];
+  for (let i = 0; i < count * 4 && parts.length < count; i++) {
+    const d = r.dir();
+    const p = d.clone().multiplyScalar(dist(d));
+    if (avoid && inWedge(p, avoid)) continue;
+    if (keep && !keep(d)) continue;
+    const l = r.range(len[0], len[1]);
+    const g = new THREE.CapsuleGeometry(radius, l, 3, 7);
+    parts.push(place(g, p.clone().addScaledVector(d, l / 2 - radius * 0.5), alignY(d)));
+  }
+  return merge(parts);
+}
+
+/** Capsule bent along an arc (curved mitochondria, bacilli): length 2h, radius r, bend in radians. */
+export function bentCapsule(h: number, r: number, bend: number, seg = 10, radial = 12): THREE.BufferGeometry {
+  const pts: THREE.Vector3[] = [];
+  const n = 24;
+  const R = bend > 1e-3 ? (2 * h) / bend : Infinity;
+  for (let i = 0; i <= n; i++) {
+    const t = i / n - 0.5;
+    if (!Number.isFinite(R)) pts.push(new THREE.Vector3(0, t * 2 * h, 0));
+    else {
+      const a = t * bend;
+      pts.push(new THREE.Vector3(R * (1 - Math.cos(a)), R * Math.sin(a), 0));
+    }
+  }
+  const curve = new THREE.CatmullRomCurve3(pts, false, 'catmullrom');
+  const tubeG = new THREE.TubeGeometry(curve, seg * 2, r, radial, false);
+  const capA = new THREE.SphereGeometry(r, radial, 8);
+  const capB = new THREE.SphereGeometry(r, radial, 8);
+  place(capA, pts[0]);
+  place(capB, pts[n]);
+  return merge([tubeG, capA, capB]);
+}
+
+/** Thin filaments following the inner surface of a shape (cortical actin / cortical microtubules). */
+export function corticalFilaments(r: Rng, dist: DistFn, k: number, count: number, length: number, radius: number, avoid: Cut | null): THREE.BufferGeometry {
+  const parts: THREE.BufferGeometry[] = [];
+  for (let i = 0; i < count * 3 && parts.length < count; i++) {
+    const d = r.dir();
+    const start = d.clone().multiplyScalar(dist(d) * k);
+    if (avoid && inWedge(start, avoid)) continue;
+    // walk along a random tangent direction, re-projected on the surface each step
+    let dir = r.dir();
+    dir.addScaledVector(d, -dir.dot(d)).normalize();
+    const pts = [start.clone()];
+    let p = start.clone();
+    const steps = 8;
+    let ok = true;
+    for (let s = 0; s < steps; s++) {
+      p = p.clone().addScaledVector(dir, length / steps);
+      const n = p.clone().normalize();
+      p = n.multiplyScalar(dist(n) * k);
+      if (avoid && inWedge(p, avoid)) {
+        ok = false;
+        break;
+      }
+      dir.addScaledVector(n, -dir.dot(n)).normalize();
+      pts.push(p.clone());
+    }
+    if (!ok || pts.length < 4) continue;
+    parts.push(tube(pts, radius, false, 24, 4));
+  }
+  return merge(parts);
 }

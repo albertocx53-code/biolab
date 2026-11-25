@@ -6,6 +6,7 @@
 import type { CatalogGroup, CatalogMesh, CatalogModel } from '@/engine/types';
 import type { Attribution, Structure } from '@/data/biology/schema';
 import { HUMAN_CONTENT, REFS, SYSTEM_NOTES, type HumanContent } from '@/data/biology/human/content';
+import { EXTRA_BOUNDS, EXTRA_MESHES, EXTRA_MODEL_ID, EXTRA_ORGAN_COMPOSITES, FEMALE_GROUP } from './extra-catalog';
 
 export interface RawHumanCatalog {
   version: number;
@@ -38,6 +39,7 @@ export const GROUP_SYSTEM_NAME: Record<string, string> = {
   digestorio: 'Sistema digestório',
   urinario: 'Sistema urinário',
   reprodutor: 'Sistema reprodutor',
+  [FEMALE_GROUP]: 'Sistema reprodutor',
   endocrino: 'Sistema endócrino',
   linfatico: 'Sistema linfático',
 };
@@ -65,6 +67,67 @@ export interface HumanIndex {
 
 export const baseId = (id: string) => id.replace(/-(dir|esq)(-\d+)?$/, '');
 
+/**
+ * Teaching composites added on top of the generated catalog: whole vessels
+ * and valves that the source data only has in pieces. Members that are not
+ * in the catalog are ignored, so the list is safe across model versions.
+ */
+export const EXTRA_COMPOSITES: RawHumanCatalog['composites'] = [
+  { id: 'aorta', n: 'Aorta', la: 'Aorta', g: 'vasos', members: ['ascending-aorta', 'aortic-arch', 'thoracic-aorta', 'abdominal-aorta'] },
+  { id: 'veias-cavas', n: 'Veias cavas', la: 'Venae cavae', g: 'vasos', members: ['superior-vena-cava', 'inferior-vena-cava-thoracic-part', 'inferior-vena-cava-abdominal-part'] },
+  { id: 'arterias-pulmonares', n: 'Tronco e artérias pulmonares', la: 'Truncus pulmonalis; arteriae pulmonales', g: 'vasos', members: ['pulmonary-trunk', 'bifurcation-of-pulmonary-trunk', 'left-pulmonary-artery', 'right-pulmonary-artery'] },
+  { id: 'veias-pulmonares', n: 'Veias pulmonares', la: 'Venae pulmonales', g: 'vasos', members: ['right-superior-pulmonary-vein', 'right-inferior-pulmonary-vein', 'left-superior-pulmonary-vein', 'left-inferior-pulmonary-vein'] },
+  { id: 'arterias-coronarias', n: 'Artérias coronárias', la: 'Arteriae coronariae', g: 'vasos', members: ['right-coronary-artery', 'left-coronary-artery', 'right-inferolateral-branch-of-right-coronary-artery'] },
+  {
+    id: 'grandes-vasos',
+    n: 'Grandes vasos do coração',
+    la: null,
+    g: 'vasos',
+    members: [
+      'ascending-aorta',
+      'aortic-arch',
+      'superior-vena-cava',
+      'inferior-vena-cava-thoracic-part',
+      'pulmonary-trunk',
+      'bifurcation-of-pulmonary-trunk',
+      'left-pulmonary-artery',
+      'right-pulmonary-artery',
+      'right-superior-pulmonary-vein',
+      'right-inferior-pulmonary-vein',
+      'left-superior-pulmonary-vein',
+      'left-inferior-pulmonary-vein',
+    ],
+  },
+  { id: 'valva-tricuspide', n: 'Valva tricúspide (atrioventricular direita)', la: 'Valva atrioventricularis dextra', g: 'coracao', members: ['inferior-leaflet-of-right-atrioventricular-valve', 'septal-leaflet-of-right-atrioventricular-valve'] },
+  { id: 'valva-mitral', n: 'Valva mitral (atrioventricular esquerda)', la: 'Valva atrioventricularis sinistra', g: 'coracao', members: ['posterior-leaflet-of-left-atrioventricular-valve'] },
+  { id: 'valva-aortica', n: 'Valva aórtica', la: 'Valva aortae', g: 'coracao', members: ['left-coronary-leaflet', 'non-coronary-leaflet', 'right-coronary-leaflet'] },
+  { id: 'valva-pulmonar', n: 'Valva pulmonar', la: 'Valva trunci pulmonalis', g: 'coracao', members: ['anterior-semilunar-leaflet-of-pulmonary-valve', 'left-semilunar-leaflet-of-pulmonary-valve', 'right-semilunar-leaflet-of-pulmonary-valve'] },
+];
+
+/**
+ * Adds the organs BioLab models procedurally (kidneys, brain, female
+ * reproductive system) to a generated catalog: one extra model, one extra
+ * layer and their meshes and teaching composites. Idempotent.
+ */
+export function withExtraOrgans(input: RawHumanCatalog): RawHumanCatalog {
+  if (input.models.some((m) => m.id === EXTRA_MODEL_ID)) return { ...input };
+  const ids = new Set(input.meshes.map((m) => m.id));
+  const meshes = EXTRA_MESHES.filter((m) => !ids.has(m.id)).map((m) => ({ id: m.id, m: EXTRA_MODEL_ID, g: m.g, c: m.c, n: m.n, la: m.la, en: m.en, ...EXTRA_BOUNDS[m.id] }));
+  const male = input.groups.find((g) => g.id === 'reprodutor');
+  const groups = input.groups.map((g) => (g.id === 'reprodutor' && !/masculino/i.test(g.name) ? { ...g, name: `${g.name} (masculino)` } : g));
+  if (!groups.some((g) => g.id === FEMALE_GROUP))
+    groups.push({ id: FEMALE_GROUP, name: 'Sistema reprodutor (feminino)', modelId: EXTRA_MODEL_ID, color: '#D87A9A', defaultVisible: false, defaultOpacity: 1, order: (male?.order ?? 10) + 0.5 });
+  groups.sort((a, b) => a.order - b.order);
+  const compIds = new Set(input.composites.map((c) => c.id));
+  return {
+    ...input,
+    models: [...input.models, { id: EXTRA_MODEL_ID, url: '', bytes: 0, label: 'Órgãos modelados pelo BioLab 3D' }],
+    groups,
+    meshes: [...input.meshes, ...meshes],
+    composites: [...input.composites, ...EXTRA_ORGAN_COMPOSITES.filter((c) => !compIds.has(c.id))],
+  };
+}
+
 function contentFor(id: string): HumanContent | undefined {
   return HUMAN_CONTENT[id] ?? HUMAN_CONTENT[baseId(id)];
 }
@@ -79,7 +142,13 @@ export function normalize(s: string) {
     .trim();
 }
 
-export function buildHumanIndex(raw: RawHumanCatalog): HumanIndex {
+export function buildHumanIndex(input: RawHumanCatalog): HumanIndex {
+  const raw = withExtraOrgans(input);
+  const known = new Set(raw.meshes.map((m) => m.id));
+  const existing = new Set(raw.composites.map((c) => c.id));
+  const extra = EXTRA_COMPOSITES.map((c) => ({ ...c, members: c.members.filter((m) => known.has(m)) })).filter((c) => c.members.length && !existing.has(c.id));
+  raw.composites = [...raw.composites, ...extra];
+  const modelled = new Set(EXTRA_MESHES.map((m) => m.id));
   const structures = new Map<string, Structure>();
   const meshInfo = new Map<string, CatalogMesh>();
   const members = new Map<string, string[]>();
@@ -109,7 +178,7 @@ export function buildHumanIndex(raw: RawHumanCatalog): HumanIndex {
       educationalTopics: c?.topics ?? [GROUP_SYSTEM_NAME[group] ?? group],
       modelMeshIds: meshes,
       scientificReferences: (c?.refs ?? []).map((r) => REFS[r]),
-      assetAttributions: HUMAN_ATTRIBUTIONS,
+      assetAttributions: meshes.every((m) => modelled.has(m)) ? [] : HUMAN_ATTRIBUTIONS,
       contentReviewed: !!c,
     };
   };

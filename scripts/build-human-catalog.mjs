@@ -28,6 +28,7 @@ for (const line of fs.readFileSync(translationsFile, 'utf8').split('\n')) {
 }
 // pt-BR corrections for terms where the source translation is pt-PT or missing
 const PT_OVERRIDES = {
+  'ascending colon': 'Cólon ascendente',
   testis: 'Testículo',
   'ductus deferens': 'Ducto deferente',
   'abdominal part of pectoralis major muscle': 'Parte abdominal do músculo peitoral maior',

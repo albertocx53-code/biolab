@@ -6,10 +6,10 @@ Fonte de verdade: `data/biology/laboratories.ts` (o painel lê dali).
 |---|---|---|---|
 | Corpo Humano | **Disponível** | 1 | 13 camadas/sistemas, 2.206 malhas, 19 regiões clicáveis, painel científico |
 | Células | **Disponível** | 3 | Células animal, vegetal e procariótica; mitocôndria e cloroplasto em detalhe; mitose; 8 animações |
-| Genética | Planejado | 2 | DNA, replicação, transcrição, tradução, cromossomos, heredogramas |
+| Genética | **Disponível** | 2 | DNA, nucleotídeos, RNA, cromossomo; replicação, transcrição, tradução e mutações animadas; quadro de Punnett e código genético |
 | Plantas | **Disponível** | 4 | Planta com flores, flor, semente e germinação, cortes de folha, caule e raiz; 10 animações |
-| Animais | Planejado | 3 | Comparação de sistemas entre grupos, embriologia |
-| Microrganismos | Planejado | 4 | Bactéria, vírus, fungos, protozoários, ciclos de doenças |
+| Animais | **Disponível** | 3 | 13 modelos (invertebrados, vertebrados, corações comparados), embriologia e metamorfoses animadas, chave dicotômica, comparação de sistemas, árvore filogenética |
+| Microrganismos | **Disponível** | 4 | Bactérias, bacteriófago, coronavírus, levedura, bolor, cogumelo, ameba, paramécio, euglena; ciclos virais, conjugação, resistência, brotamento e fagocitose animados; escala, comparação e crescimento bacteriano |
 
 ## O que já é compartilhado
 
@@ -21,11 +21,11 @@ componente em `laboratories/<lab>/`.
 
 ## Corpo Humano: pendências
 
-- Rins, orelha interna e encéfalo detalhado (ver `MODEL_LICENSES.md`).
+- Orelha interna (ver `MODEL_LICENSES.md`). Rins, encéfalo e órgãos femininos internos já são modelados em `laboratories/human/organs.ts`.
 - 148 nomes ainda sem tradução para o português (aparecem em inglês/latim).
 - Conteúdo curado para ~50 estruturas; as demais mostram nome, sistema e o aviso "em elaboração".
-- Processos animados (batimento cardíaco, respiração, contração muscular).
-- Modelo feminino (o Z-Anatomy é masculino).
+- Processos animados de respiração e contração muscular (circulação e ciclo cardíaco já existem em `laboratories/human/CirculationLayer.tsx`).
+- Corpo feminino: mamas, vulva e órgãos internos já existem; falta adaptar pelve óssea, quadris e musculatura (hoje o contorno, os ossos e os músculos são os do modelo masculino).
 
 ## Motor procedural compartilhado
 
@@ -37,9 +37,17 @@ caminhos) e o relógio das animações. Um novo laboratório procedural precisa 
 
 ## Células: pendências
 
-- Meiose, transporte ativo/difusão facilitada e endocitose como animações próprias.
-- Citoesqueleto (microtúbulos e filamentos) e peroxissomos com mais detalhe.
+- Transporte ativo/difusão facilitada e endocitose como animações próprias.
+- Conjugação bacteriana animada.
 - Revisão pedagógica dos textos.
+
+## Roteiros de aula
+
+`data/biology/lessons/` guarda os roteiros (`Lesson`: unidade, série, duração, objetivos, seções com
+botões de ação, termos-chave, perguntas, erros comuns, referências). `components/laboratory/LessonsPanel.tsx`
+os mostra; cada laboratório traduz as ações (`structure`, `process`, `model`, `group`) para o seu motor
+(`runLessonAction` em `ProceduralLab` e em `HumanLab`). `tests/unit/lessons.test.ts` garante que todo id
+citado existe no laboratório.
 
 ## Plantas: pendências
 

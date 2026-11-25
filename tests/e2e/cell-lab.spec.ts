@@ -98,6 +98,36 @@ test.describe('Laboratório de Células', () => {
     expect(x[1]).toBeGreaterThan(0.5);
   });
 
+  test('meiose e fissão binária: a última etapa separa as células', async ({ page }) => {
+    await openCells(page, 'meiose');
+    let player = page.getByTestId('process-player');
+    await expect(player.getByTestId('process-step-title')).toHaveText('Interfase');
+    await player.getByRole('button', { name: 'Telófase II' }).click();
+    await page.evaluate(() => { const b = (window as unknown as W).__biolab; b.process.getState().setPlaying(false); b.clock.t = 999; });
+    await page.waitForTimeout(800);
+    const ys = await page.evaluate(() => ['membrana-a1', 'membrana-a2'].map((id) => (window as unknown as W).__biolab.registry.get(id).scale.x));
+    expect(ys.every((v: number) => v > 0.5)).toBe(true);
+    await openCells(page, 'fissao');
+    player = page.getByTestId('process-player');
+    await player.getByRole('button', { name: 'Separação' }).click();
+    await page.evaluate(() => { const b = (window as unknown as W).__biolab; b.process.getState().setPlaying(false); b.clock.t = 999; });
+    await page.waitForTimeout(1200);
+    const sc = await page.evaluate(() => ['parede-a', 'parede-b'].map((id) => (window as unknown as W).__biolab.registry.get(id).scale.x));
+    expect(sc.every((v: number) => v > 0.5)).toBe(true);
+  });
+
+  test('roteiros de aula: um botão do roteiro seleciona a estrutura no 3D', async ({ page }) => {
+    await openCells(page);
+    await page.getByTestId('lessons-toggle').click();
+    await expect(page.getByTestId('lessons-panel')).toBeVisible();
+    await page.getByTestId('lesson-organelas-endomembranas').click();
+    await page.locator('[data-testid=lesson-action][data-structure=complexo-golgiense]').first().click();
+    await page.waitForTimeout(400);
+    expect((await state(page)).selectedId).toBe('complexo-golgiense');
+    await page.getByRole('button', { name: 'Abrir ficha' }).click();
+    await expect(page.getByTestId('scientific-panel')).toContainText('Complexo golgiense');
+  });
+
   test('Modo Apresentação e liberação de memória ao sair', async ({ page }) => {
     await openCells(page);
     await page.getByTestId('presentation-toggle').click();

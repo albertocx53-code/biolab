@@ -4,9 +4,11 @@ import { useGLTF } from '@react-three/drei';
 import { useThree, type ThreeEvent } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
+import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from 'three-mesh-bvh';
 import type { CatalogMesh, CatalogModel } from '@/engine/types';
 import type { MaterialLibrary } from '@/engine/visibility/materials';
+import { interaction } from '@/engine/interaction';
 import { meshRegistry } from '@/engine/selection/registry';
 import { useViewer } from '@/engine/store';
 
@@ -32,9 +34,6 @@ interface Props {
  */
 export function GltfModel({ model, meshInfo, library, hover, onPick }: Props) {
   const gltf = useGLTF(model.url, DRACO_PATH);
-  const setHover = useViewer((s) => s.hover);
-  const invalidate = useThree((s) => s.invalidate);
-  const lastHover = useRef(0);
 
   const root = useMemo(() => {
     const scene = gltf.scene;
@@ -45,40 +44,11 @@ export function GltfModel({ model, meshInfo, library, hover, onPick }: Props) {
         o.visible = true;
         return;
       }
-      const id = mesh.name;
-      const info = meshInfo.get(id);
-      const group = info?.group ?? 'outros';
-      const mat = library.get(group, info?.material ?? 'default');
-      mesh.userData.meshId = id;
-      mesh.userData.group = group;
-      mesh.userData.base = mat;
-      mesh.material = mat;
-      if (!mesh.geometry.boundsTree) mesh.geometry.computeBoundsTree();
-      mesh.matrixAutoUpdate = false;
-      mesh.updateMatrix();
+      prepareMesh(mesh, mesh.name, meshInfo, library);
     });
     scene.updateMatrixWorld(true);
     return scene;
   }, [gltf, meshInfo, library]);
-
-  useEffect(() => {
-    // A Suspense boundary may have hidden this subtree while a model was pending; mesh-level
-    // visibility is owned by SceneSync, so the container itself must always be visible.
-    root.visible = true;
-    const registered: [string, THREE.Mesh][] = [];
-    root.traverse((o) => {
-      const mesh = o as THREE.Mesh;
-      if (mesh.isMesh && mesh.userData.meshId) {
-        meshRegistry.register(mesh.userData.meshId, mesh);
-        registered.push([mesh.userData.meshId, mesh]);
-      }
-    });
-    useViewer.getState().setModelState(model.id, 'ready');
-    invalidate();
-    return () => {
-      for (const [id, mesh] of registered) meshRegistry.unregister(id, mesh);
-    };
-  }, [root, model.id, invalidate]);
 
   // Leaving the laboratory: free GPU/CPU memory held by this model. Disposal is deferred so a
   // quick remount (React StrictMode, fast navigation back) reuses the cached asset instead.
@@ -108,6 +78,69 @@ export function GltfModel({ model, meshInfo, library, hover, onPick }: Props) {
     };
   }, [root, model.url, model.id]);
 
+  return <ModelScene root={root} modelId={model.id} library={library} hover={hover} onPick={onPick} />;
+}
+
+/** Material classes exported as several body regions merged into one mesh (seams must be welded). */
+const WELDED = new Set(['pele', 'pele-genital']);
+
+/** Assigns the shared material and picking data to one catalog mesh. */
+export function prepareMesh(mesh: THREE.Mesh, id: string, meshInfo: Map<string, CatalogMesh>, library: MaterialLibrary) {
+  const info = meshInfo.get(id);
+  const group = info?.group ?? 'outros';
+  const cls = info?.material ?? 'default';
+  const mat = library.get(group, cls);
+  if (WELDED.has(cls) && !mesh.geometry.userData.welded) {
+    // The atlas skin is a merge of separate region meshes: their border vertices are duplicated, so the
+    // shading normals break at every border and draw dark seams across the body. Welding the shared
+    // vertices and recomputing the normals makes the surface continuous.
+    // (normals and uvs differ across the seam and would prevent the weld; both are rebuilt / unused)
+    mesh.geometry.deleteAttribute('normal');
+    mesh.geometry.deleteAttribute('uv');
+    const welded = mergeVertices(mesh.geometry, 1e-4);
+    welded.computeVertexNormals();
+    welded.userData.welded = true;
+    mesh.geometry.dispose();
+    mesh.geometry = welded;
+  }
+  mesh.name = id;
+  mesh.userData.meshId = id;
+  mesh.userData.group = group;
+  mesh.userData.base = mat;
+  mesh.material = mat;
+  if (!mesh.geometry.boundsTree) mesh.geometry.computeBoundsTree();
+  mesh.matrixAutoUpdate = false;
+  mesh.updateMatrix();
+}
+
+/**
+ * Registers the meshes of a prepared scene, marks the model ready and
+ * forwards pointer interaction (click to select, throttled hover).
+ */
+export function ModelScene({ root, modelId, library, hover, onPick }: { root: THREE.Object3D; modelId: string; library: MaterialLibrary; hover: boolean; onPick: (meshId: string, point: THREE.Vector3) => void }) {
+  const setHover = useViewer((s) => s.hover);
+  const invalidate = useThree((s) => s.invalidate);
+  const lastHover = useRef(0);
+
+  useEffect(() => {
+    // A Suspense boundary may have hidden this subtree while a model was pending; mesh-level
+    // visibility is owned by SceneSync, so the container itself must always be visible.
+    root.visible = true;
+    const registered: [string, THREE.Mesh][] = [];
+    root.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (mesh.isMesh && mesh.userData.meshId) {
+        meshRegistry.register(mesh.userData.meshId, mesh);
+        registered.push([mesh.userData.meshId, mesh]);
+      }
+    });
+    useViewer.getState().setModelState(modelId, 'ready');
+    invalidate();
+    return () => {
+      for (const [id, mesh] of registered) meshRegistry.unregister(id, mesh);
+    };
+  }, [root, modelId, invalidate]);
+
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
     if (e.delta > 6) return; // was a drag/orbit, not a click
     e.stopPropagation();
@@ -117,6 +150,7 @@ export function GltfModel({ model, meshInfo, library, hover, onPick }: Props) {
 
   const handleMove = hover
     ? (e: ThreeEvent<PointerEvent>) => {
+        if (interaction.cameraMoving) return; // orbiting: no hover work
         const now = performance.now();
         if (now - lastHover.current < 50) return;
         lastHover.current = now;
@@ -135,7 +169,6 @@ export function GltfModel({ model, meshInfo, library, hover, onPick }: Props) {
     />
   );
 }
-
 
 /**
  * Chooses what a click refers to: the nearest visible, non-ghosted mesh that is

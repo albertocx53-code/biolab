@@ -9,19 +9,24 @@ test.describe('Laboratório Corpo Humano', () => {
 
   test('carrega o modelo com sistemas separados e camadas sob demanda', async ({ page }) => {
     const loaded = await page.evaluate(() => (window as any).__biolab.viewer.getState().modelState);
-    // abre na camada muscular (como um atlas); pele e nervos só carregam quando pedidos
-    expect(loaded).toMatchObject({ esqueletico: 'ready', visceral: 'ready', coracao: 'ready', muscular: 'ready' });
-    expect(loaded.nervoso).toBeUndefined();
-    await page.getByRole('switch', { name: 'Mostrar Sistema nervoso (nervos)' }).click();
-    await page.waitForFunction(() => (window as any).__biolab.viewer.getState().modelState.nervoso === 'ready', null, { timeout: 60_000 });
+    // abre na pele (pessoa inteira); músculos e vasos só carregam quando a camada é descascada.
+    // O modelo nervoso vem junto porque contém os olhos, fixados visíveis com a pele.
+    expect(loaded).toMatchObject({ tegumentar: 'ready', visceral: 'ready', coracao: 'ready' });
+    expect(loaded.muscular).toBeUndefined();
+    expect(loaded.esqueletico).toBeUndefined();
+    expect(loaded.vasos).toBeUndefined();
+    const eyes = await page.evaluate(() => { const r = (window as any).__biolab.registry; return ['sclera-dir', 'iris-esq'].map((id) => r.get(id)?.visible); });
+    expect(eyes).toEqual([true, true]);
+    await page.getByRole('button', { name: 'Músculos', exact: true }).click();
+    await page.waitForFunction(() => { const st = (window as any).__biolab.viewer.getState().modelState; return st.muscular === 'ready' && st.vasos === 'ready'; }, null, { timeout: 60_000 });
     expect(await page.evaluate(() => (window as any).__biolab.registry.size())).toBeGreaterThan(1200);
   });
 
   test('controle de profundidade: pele → músculos → esqueleto → órgãos', async ({ page }) => {
     const vis = () => page.evaluate(() => { const s = (window as any).__biolab.viewer.getState(); return [s.groupVisible.tegumentar, s.groupVisible.muscular, s.groupVisible.esqueletico]; });
-    // com a pele opaca os músculos (totalmente cobertos) não são desenhados
+    // com a pele opaca, músculos e ossos (totalmente cobertos) não são desenhados
     await page.getByRole('button', { name: 'Pele', exact: true }).click();
-    expect(await vis()).toEqual([true, false, true]);
+    expect(await vis()).toEqual([true, false, false]);
     await page.getByRole('button', { name: 'Músculos', exact: true }).click();
     expect(await vis()).toEqual([false, true, true]);
     await page.getByRole('button', { name: 'Esqueleto', exact: true }).click();
@@ -43,6 +48,65 @@ test.describe('Laboratório Corpo Humano', () => {
     expect(await page.evaluate(() => (window as any).__biolab.viewer.getState().selectedId)).toBe('coracao');
   });
 
+  test('coração e circulação: vasos aparecem ao descascar a pele, corte do coração e animação do sangue', async ({ page }) => {
+    // under opaque skin the vessels are not drawn; peeling to the muscles brings them in
+    expect(await page.evaluate(() => (window as any).__biolab.viewer.getState().groupVisible.vasos)).toBe(false);
+    await page.getByRole('button', { name: 'Músculos', exact: true }).click();
+    await page.waitForFunction(() => (window as any).__biolab.viewer.getState().modelState.vasos === 'ready', null, { timeout: 60_000 });
+    expect(await page.evaluate(() => (window as any).__biolab.viewer.getState().groupVisible.vasos)).toBe(true);
+    await page.getByRole('button', { name: 'Ver coração e vasos' }).click();
+    await page.waitForTimeout(500);
+    const st = await page.evaluate(() => (window as any).__biolab.viewer.getState());
+    expect(st.groupVisible.coracao && st.groupVisible.vasos).toBe(true);
+    expect(st.groupOpacity.respiratorio).toBeLessThan(0.5);
+    await page.getByRole('button', { name: 'Corte do coração' }).click();
+    await expect(page.getByRole('button', { name: 'Fechar o coração' })).toBeVisible();
+    await page.getByRole('button', { name: /Caminho do sangue/ }).click();
+    await expect(page.getByTestId('process-player')).toBeVisible();
+    await page.getByTestId('process-player').getByRole('button', { name: 'Fechar animação' }).click();
+  });
+
+  test('rins, encéfalo e sistema feminino modelados pelo BioLab: cortes, troca de sistema e ficha', async ({ page }) => {
+    const bl = () => page.evaluate(() => { const b = (window as any).__biolab; const s = b.viewer.getState(); return { has: ['cortex-renal-esq', 'lobo-frontal-esq', 'cerebelo', 'utero'].every((id) => b.registry.has(id)), m: s.groupVisible.reprodutor, f: s.groupVisible['reprodutor-feminino'], n: s.groupVisible.nervoso }; });
+    await page.waitForFunction(() => (window as any).__biolab.registry.has('utero'), null, { timeout: 30_000 });
+    expect((await bl()).has).toBe(true);
+    await page.getByTestId('kidney-cut').click();
+    await expect(page.getByRole('button', { name: 'Fechar os rins' })).toBeVisible();
+    await page.getByTestId('brain-cut').click();
+    await expect(page.getByRole('button', { name: 'Fechar o encéfalo' })).toBeVisible();
+    expect((await bl()).n).toBe(true);
+    // corpo masculino ou feminino: troca os órgãos reprodutores e a pele
+    expect((await bl()).f).toBe(false);
+    const excluded = (id: string) => page.evaluate((m) => !!(window as any).__biolab.viewer.getState().excludedMeshIds[m], id);
+    expect(await excluded('utero')).toBe(true);
+    await page.getByTestId('view-repro').click();
+    await page.getByTestId('sex-feminino').click();
+    await page.waitForTimeout(300);
+    expect(await bl()).toMatchObject({ f: true, m: false });
+    expect(await excluded('prostate')).toBe(true);
+    expect(await excluded('pele-mama-esq')).toBe(false);
+    await page.getByTestId('sex-masculino').click();
+    await page.waitForTimeout(300);
+    expect(await bl()).toMatchObject({ f: false, m: true });
+    expect(await excluded('pele-mama-esq')).toBe(true);
+    // a ficha do útero vem do conteúdo próprio
+    await page.getByRole('combobox', { name: 'Buscar estrutura anatômica' }).fill('utero');
+    await page.keyboard.press('Enter');
+    const panel = page.getByTestId('scientific-panel');
+    await expect(panel.locator('#sci-title')).toHaveText('Útero');
+    await expect(panel).toContainText('endométrio');
+    expect(await bl()).toMatchObject({ f: true, m: false });
+  });
+
+  test('roteiros de aula: um botão do roteiro mostra um sistema e seleciona um órgão', async ({ page }) => {
+    await page.getByTestId('lessons-toggle').click();
+    await expect(page.getByTestId('lessons-panel')).toBeVisible();
+    await page.getByTestId('lesson-sistema-digestorio').click();
+    await page.locator('[data-testid=lesson-action][data-structure=stomach]').first().click();
+    await page.waitForTimeout(500);
+    expect(await page.evaluate(() => (window as any).__biolab.viewer.getState().selectedId)).toBe('stomach');
+  });
+
   test('busca, foco, isolamento e ligação com o Studio', async ({ page }) => {
     await page.getByRole('combobox', { name: 'Buscar estrutura anatômica' }).fill('testiculo');
     await page.keyboard.press('Enter');
@@ -55,8 +119,10 @@ test.describe('Laboratório Corpo Humano', () => {
   });
 
   test('clique no braço abre a região e revela os ossos', async ({ page }) => {
+    // load the skeleton once (it is not drawn under opaque skin) so the humerus can be located on screen
+    await page.getByRole('button', { name: 'Esqueleto', exact: true }).click();
+    await page.waitForFunction(() => (window as any).__biolab.viewer.getState().modelState.esqueletico === 'ready', null, { timeout: 60_000 });
     await page.getByRole('button', { name: 'Pele', exact: true }).click();
-    await page.waitForFunction(() => (window as any).__biolab.viewer.getState().modelState.tegumentar === 'ready', null, { timeout: 60_000 });
     await page.waitForTimeout(300);
     const p = await screenPointOf(page, 'humerus-dir');
     await page.mouse.click(p.x - 10, p.y);
@@ -72,6 +138,8 @@ test.describe('Laboratório Corpo Humano', () => {
   });
 
   test('camadas: ocultar sistema e transparência', async ({ page }) => {
+    await page.getByRole('button', { name: 'Esqueleto', exact: true }).click();
+    await page.waitForFunction(() => (window as any).__biolab.viewer.getState().modelState.esqueletico === 'ready', null, { timeout: 60_000 });
     await page.getByRole('switch', { name: 'Ocultar Sistema esquelético' }).click();
     const visible = await page.evaluate(() => (window as any).__biolab.registry.get('humerus-dir').visible);
     expect(visible).toBe(false);

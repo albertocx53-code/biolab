@@ -26,10 +26,13 @@ export function ScientificPanel({ structure: s, getStructure, systemNote, canUse
   const command = useViewer((st) => st.command);
   const isolate = useViewer((st) => st.isolate);
   const isolated = useViewer((st) => st.isolatedMeshIds);
+  const isolationMode = useViewer((st) => st.isolationMode);
   const hide = useViewer((st) => st.hideMeshes);
   const presentation = useViewer((st) => st.presentation);
   const parent = s.parentStructureId ? getStructure(s.parentStructureId) : undefined;
-  const isIsolated = !!isolated && isolated.length === s.modelMeshIds.length && s.modelMeshIds.every((m) => isolated.includes(m));
+  const coversSelection = !!isolated && isolated.length === s.modelMeshIds.length && s.modelMeshIds.every((m) => isolated.includes(m));
+  const isIsolated = coversSelection && isolationMode === 'ghost';
+  const isSolo = coversSelection && isolationMode === 'solo';
 
   return (
     <article className="flex h-full flex-col" aria-labelledby="sci-title" data-testid="scientific-panel">
@@ -65,6 +68,19 @@ export function ScientificPanel({ structure: s, getStructure, systemNote, canUse
             }}
           >
             <Icon name="isolate" size={15} /> {isIsolated ? 'Sair do isolamento' : 'Isolar'}
+          </button>
+          <button
+            type="button"
+            className="btn btn-ghost h-9 px-3 text-[13px]"
+            aria-pressed={isSolo}
+            title="Mostra só esta estrutura, sem nada em volta"
+            data-testid="solo-structure"
+            onClick={() => {
+              isolate(isSolo ? null : s.modelMeshIds, 'solo');
+              if (!isSolo) command({ type: 'focus', meshIds: s.modelMeshIds });
+            }}
+          >
+            <Icon name="eye" size={15} /> {isSolo ? 'Mostrar o resto' : 'Ver só esta'}
           </button>
           <button
             type="button"

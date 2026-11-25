@@ -21,8 +21,17 @@ export interface ViewerState {
   groupVisible: Record<string, boolean>;
   groupOpacity: Record<string, number>;
   hiddenMeshIds: Record<string, true>;
-  /** When set, everything except these meshes is ghosted. */
+  /**
+   * Meshes that are not part of the body variant being shown (e.g. the male
+   * organs while the female body is chosen). Unlike `hiddenMeshIds`, "show all"
+   * does not bring them back.
+   */
+  excludedMeshIds: Record<string, true>;
+  /** When set, everything except these meshes is ghosted ('ghost') or not drawn at all ('solo'). */
   isolatedMeshIds: string[] | null;
+  isolationMode: 'ghost' | 'solo';
+  /** Meshes shown even when their group is off (e.g. the eyes while the skin is on). */
+  pinnedMeshIds: Record<string, true>;
   quality: QualityProfile;
   presentation: boolean;
   uiHidden: boolean;
@@ -39,7 +48,9 @@ export interface ViewerState {
   setGroupOpacity(group: string, opacity: number): void;
   hideMeshes(ids: string[]): void;
   showAll(): void;
-  isolate(ids: string[] | null): void;
+  setExcluded(ids: string[]): void;
+  isolate(ids: string[] | null, mode?: 'ghost' | 'solo'): void;
+  setPinned(ids: string[]): void;
   setQuality(q: QualityProfile): void;
   setPresentation(on: boolean): void;
   toggleUi(): void;
@@ -56,7 +67,10 @@ export const useViewer = create<ViewerState>((set) => ({
   groupVisible: {},
   groupOpacity: {},
   hiddenMeshIds: {},
+  excludedMeshIds: {},
   isolatedMeshIds: null,
+  isolationMode: 'ghost',
+  pinnedMeshIds: {},
   quality: 'equilibrado',
   presentation: false,
   uiHidden: false,
@@ -83,7 +97,9 @@ export const useViewer = create<ViewerState>((set) => ({
   setGroupOpacity: (group, opacity) => set((s) => ({ groupOpacity: { ...s.groupOpacity, [group]: Math.min(1, Math.max(0, opacity)) } })),
   hideMeshes: (ids) => set((s) => ({ hiddenMeshIds: { ...s.hiddenMeshIds, ...Object.fromEntries(ids.map((i) => [i, true as const])) } })),
   showAll: () => set({ hiddenMeshIds: {}, isolatedMeshIds: null }),
-  isolate: (ids) => set({ isolatedMeshIds: ids && ids.length ? ids : null }),
+  setExcluded: (ids) => set({ excludedMeshIds: Object.fromEntries(ids.map((i) => [i, true as const])) }),
+  isolate: (ids, mode = 'ghost') => set({ isolatedMeshIds: ids && ids.length ? ids : null, isolationMode: mode }),
+  setPinned: (ids) => set({ pinnedMeshIds: Object.fromEntries(ids.map((i) => [i, true as const])) }),
   setQuality: (quality) => set({ quality }),
   setPresentation: (presentation) => set({ presentation, uiHidden: false }),
   toggleUi: () => set((s) => ({ uiHidden: !s.uiHidden })),
@@ -91,5 +107,5 @@ export const useViewer = create<ViewerState>((set) => ({
   setLabels: (labels) => set({ labels }),
   setModelState: (modelId, st) => set((s) => ({ modelState: { ...s.modelState, [modelId]: st } })),
   command: (cmd) => set((s) => ({ camera: { cmd, nonce: (s.camera?.nonce ?? 0) + 1 } })),
-  setZoomPercent: (zoomPercent) => set({ zoomPercent }),
+  setZoomPercent: (zoomPercent) => set((s) => (s.zoomPercent === zoomPercent ? s : { zoomPercent })),
 }));

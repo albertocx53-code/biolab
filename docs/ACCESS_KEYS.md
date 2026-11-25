@@ -1,5 +1,8 @@
 # Sistema de chaves de acesso
 
+> **Acesso livre (padrão):** desde novembro de 2026 o site abre sem chave e libera tudo. O sistema
+> abaixo continua no código e volta a valer com `BIOLAB_REQUIRE_KEY=1` no ambiente.
+
 Não há e-mail, senha nem login social. O professor recebe uma chave após a compra e a digita na
 página inicial.
 

@@ -9,6 +9,7 @@
  * Biology educator before commercial release (see SCIENTIFIC_CONTENT.md).
  */
 import type { Reference } from '@/data/biology/schema';
+import { ORGAN_CONTENT } from './organs-content';
 
 export interface HumanContent {
   category: string;
@@ -28,6 +29,122 @@ export const REFS = {
 } satisfies Record<string, Reference>;
 
 export const HUMAN_CONTENT: Record<string, HumanContent> = {
+  // ------------------------------------------------------------ Cardiovascular: conjuntos e vasos (circulação)
+  aorta: {
+    category: 'Artéria',
+    description:
+      'A maior artéria do corpo. Sai do ventrículo esquerdo (aorta ascendente), faz uma curva (arco da aorta), de onde partem as artérias para a cabeça e os braços, e desce pelo tórax e pelo abdome (aorta torácica e abdominal) até se dividir nas artérias ilíacas comuns.',
+    function: 'Receber todo o sangue oxigenado bombeado pelo ventrículo esquerdo e distribuí-lo, por seus ramos, a todos os órgãos: é o tronco da circulação sistêmica (grande circulação).',
+    educational:
+      'A parede da aorta é rica em fibras elásticas: ela se distende na sístole e volta na diástole, o que mantém o sangue fluindo entre os batimentos. Aneurisma e aterosclerose são doenças dessa parede.',
+    related: ['coracao', 'left-ventricle', 'ascending-aorta', 'aortic-arch', 'thoracic-aorta', 'abdominal-aorta'],
+    topics: ['Sistema cardiovascular', 'Circulação sistêmica', 'Artérias', 'Pressão arterial'],
+    refs: ['apOrgans'],
+  },
+  'aortic-arch': {
+    category: 'Artéria',
+    description: 'Curva da aorta acima do coração, da qual saem três grandes ramos: o tronco braquiocefálico, a artéria carótida comum esquerda e a artéria subclávia esquerda.',
+    function: 'Levar sangue oxigenado para a cabeça, o pescoço e os membros superiores, e continuar como aorta torácica.',
+    related: ['aorta', 'ascending-aorta', 'thoracic-aorta', 'brachiocephalic-trunk'],
+    topics: ['Sistema cardiovascular', 'Circulação sistêmica'],
+    refs: ['apOrgans'],
+  },
+  'veias-cavas': {
+    category: 'Veias',
+    description:
+      'As duas maiores veias do corpo. A veia cava superior recolhe o sangue da cabeça, do pescoço e dos braços; a veia cava inferior, o das pernas, da pelve e do abdome. As duas desembocam no átrio direito.',
+    function: 'Devolver ao coração o sangue pobre em oxigênio que percorreu todo o corpo, fechando a circulação sistêmica.',
+    educational: 'Nas veias o sangue flui com pressão baixa; nas pernas, as valvas venosas e a contração dos músculos (bomba muscular) ajudam o retorno. Varizes são valvas que falharam.',
+    related: ['coracao', 'right-atrium', 'superior-vena-cava', 'inferior-vena-cava-thoracic-part', 'inferior-vena-cava-abdominal-part'],
+    topics: ['Sistema cardiovascular', 'Retorno venoso', 'Veias'],
+    refs: ['apOrgans'],
+  },
+  'inferior-vena-cava-thoracic-part': {
+    category: 'Veia',
+    description: 'Trecho final da veia cava inferior, após atravessar o diafragma, até o átrio direito.',
+    function: 'Conduzir ao átrio direito o sangue venoso da metade inferior do corpo.',
+    related: ['veias-cavas', 'right-atrium', 'diaphragm'],
+    topics: ['Sistema cardiovascular', 'Retorno venoso'],
+    refs: ['apOrgans'],
+  },
+  'inferior-vena-cava-abdominal-part': {
+    category: 'Veia',
+    description: 'Parte abdominal da veia cava inferior, formada pela união das veias ilíacas comuns, à direita da aorta abdominal. Recebe as veias renais e hepáticas.',
+    function: 'Recolher o sangue venoso das pernas, da pelve, dos rins e do fígado e levá-lo ao coração.',
+    related: ['veias-cavas', 'abdominal-aorta'],
+    topics: ['Sistema cardiovascular', 'Retorno venoso'],
+    refs: ['apOrgans'],
+  },
+  'arterias-pulmonares': {
+    category: 'Artérias',
+    description:
+      'O tronco pulmonar sai do ventrículo direito e se divide nas artérias pulmonares direita e esquerda, que entram nos pulmões e se ramificam até os capilares dos alvéolos. São as únicas artérias que transportam sangue pobre em oxigênio.',
+    function: 'Levar o sangue venoso do ventrículo direito aos pulmões, onde ele libera CO₂ e recebe O₂ (hematose): é o início da circulação pulmonar (pequena circulação).',
+    educational: 'Boa pergunta para a turma: artéria é definida pelo sentido do fluxo (sai do coração), não pelo tipo de sangue. Por isso as artérias pulmonares aparecem em azul no modelo.',
+    related: ['coracao', 'right-ventricle', 'pulmonary-trunk', 'veias-pulmonares', 'pulmao-direito', 'pulmao-esquerdo'],
+    topics: ['Sistema cardiovascular', 'Circulação pulmonar', 'Hematose'],
+    refs: ['apOrgans'],
+  },
+  'veias-pulmonares': {
+    category: 'Veias',
+    description: 'Quatro veias (duas de cada pulmão) que levam o sangue oxigenado dos pulmões ao átrio esquerdo. São as únicas veias que transportam sangue rico em oxigênio.',
+    function: 'Completar a circulação pulmonar devolvendo ao coração o sangue que acabou de ser oxigenado nos alvéolos.',
+    related: ['coracao', 'left-atrium', 'arterias-pulmonares'],
+    topics: ['Sistema cardiovascular', 'Circulação pulmonar'],
+    refs: ['apOrgans'],
+  },
+  'arterias-coronarias': {
+    category: 'Artérias',
+    description: 'As artérias coronárias direita e esquerda nascem na aorta ascendente, logo acima da valva aórtica, e percorrem a superfície do coração, enviando ramos para o miocárdio.',
+    function: 'Irrigar o próprio músculo cardíaco: o coração não consegue aproveitar o sangue que passa por dentro das suas câmaras.',
+    educational: 'O infarto do miocárdio é a obstrução de uma coronária (geralmente por placa de gordura e um coágulo): a região do músculo sem irrigação morre. Ligue com hábitos de vida e com o uso de stents.',
+    related: ['coracao', 'ascending-aorta', 'right-coronary-artery', 'left-coronary-artery'],
+    topics: ['Sistema cardiovascular', 'Infarto', 'Saúde cardiovascular'],
+    refs: ['apOrgans'],
+  },
+  'grandes-vasos': {
+    category: 'Conjunto de vasos',
+    description: 'Os vasos que entram e saem diretamente do coração: veias cavas superior e inferior, tronco e artérias pulmonares, veias pulmonares e aorta.',
+    function: 'Conectar as câmaras do coração aos dois circuitos da circulação: pulmonar (lado direito) e sistêmica (lado esquerdo).',
+    educational: 'Use este conjunto com o corte do coração e a animação da circulação para mostrar o caminho completo de uma gota de sangue.',
+    related: ['coracao', 'aorta', 'veias-cavas', 'arterias-pulmonares', 'veias-pulmonares'],
+    topics: ['Sistema cardiovascular', 'Circulação pulmonar e sistêmica'],
+    refs: ['apOrgans'],
+  },
+  'valva-tricuspide': {
+    category: 'Valva cardíaca',
+    description: 'Valva atrioventricular direita, com três folhetos (cúspides), presos por cordas tendíneas aos músculos papilares do ventrículo direito.',
+    function: 'Deixar o sangue passar do átrio direito para o ventrículo direito e fechar durante a sístole, impedindo o refluxo para o átrio.',
+    educational: 'Os músculos papilares não abrem a valva: eles seguram os folhetos para que não virem para dentro do átrio quando o ventrículo contrai.',
+    related: ['coracao', 'right-atrium', 'right-ventricle', 'valva-mitral'],
+    topics: ['Sistema cardiovascular', 'Valvas cardíacas', 'Ciclo cardíaco'],
+    refs: ['apOrgans'],
+  },
+  'valva-mitral': {
+    category: 'Valva cardíaca',
+    description: 'Valva atrioventricular esquerda (bicúspide), com dois folhetos presos por cordas tendíneas aos músculos papilares do ventrículo esquerdo.',
+    function: 'Deixar o sangue passar do átrio esquerdo para o ventrículo esquerdo e fechar na sístole, impedindo o refluxo.',
+    educational: 'O primeiro som do coração ("tum") é o fechamento das valvas atrioventriculares; o segundo ("tá"), o das valvas aórtica e pulmonar.',
+    related: ['coracao', 'left-atrium', 'left-ventricle', 'valva-tricuspide'],
+    topics: ['Sistema cardiovascular', 'Valvas cardíacas', 'Ciclo cardíaco'],
+    refs: ['apOrgans'],
+  },
+  'valva-aortica': {
+    category: 'Valva cardíaca',
+    description: 'Valva semilunar com três folhetos em forma de bolso, na saída do ventrículo esquerdo para a aorta. Acima de dois deles nascem as artérias coronárias.',
+    function: 'Abrir na sístole, quando o ventrículo esquerdo ejeta o sangue para a aorta, e fechar na diástole, impedindo que o sangue volte.',
+    related: ['coracao', 'left-ventricle', 'aorta', 'arterias-coronarias', 'valva-pulmonar'],
+    topics: ['Sistema cardiovascular', 'Valvas cardíacas', 'Ciclo cardíaco'],
+    refs: ['apOrgans'],
+  },
+  'valva-pulmonar': {
+    category: 'Valva cardíaca',
+    description: 'Valva semilunar com três folhetos, na saída do ventrículo direito para o tronco pulmonar.',
+    function: 'Abrir na sístole do ventrículo direito e fechar na diástole, impedindo o refluxo do tronco pulmonar.',
+    related: ['coracao', 'right-ventricle', 'pulmonary-trunk', 'valva-aortica'],
+    topics: ['Sistema cardiovascular', 'Valvas cardíacas', 'Ciclo cardíaco'],
+    refs: ['apOrgans'],
+  },
   // ------------------------------------------------------------ Cardiovascular
   coracao: {
     category: 'Órgão',
@@ -255,8 +372,8 @@ export const HUMAN_CONTENT: Record<string, HumanContent> = {
     category: 'Órgão',
     description: 'Órgão muscular oco e distensível localizado na pelve.',
     function: 'Armazena temporariamente a urina produzida pelos rins e conduzida pelos ureteres, até sua eliminação pela uretra (micção).',
-    educational: 'Os rins não estão incluídos nesta versão do modelo por restrição de licença do arquivo 3D original (uso não comercial). Uma versão própria está prevista.',
-    related: ['ureter', 'urethra', 'prostate'],
+    educational: 'A bexiga de um adulto comporta cerca de 400 a 600 mL. Quando a parede se distende, receptores enviam sinais à medula e ao encéfalo, e surge a vontade de urinar.',
+    related: ['rins', 'ureter', 'urethra', 'prostate', 'utero'],
     topics: ['Sistema urinário', 'Excreção'],
     refs: ['apOrgans'],
   },
@@ -564,14 +681,18 @@ export const SYSTEM_NOTES: Record<string, string> = {
   fascias: 'Tecido conjuntivo associado aos músculos e articulações: fáscias envolvem e separam músculos, ligamentos unem ossos e bolsas sinoviais reduzem o atrito.',
   coracao: 'Parte do coração, órgão central do sistema cardiovascular.',
   vasos: 'Vaso sanguíneo do sistema cardiovascular. Artérias levam o sangue do coração aos tecidos; veias o trazem de volta.',
-  nervoso: 'Parte do sistema nervoso periférico ou dos órgãos dos sentidos.',
+  nervoso: 'Parte do sistema nervoso: encéfalo, medula espinal, nervos ou órgãos dos sentidos.',
   respiratorio: 'Parte do sistema respiratório, responsável pela condução do ar e pelas trocas gasosas.',
   digestorio: 'Parte do sistema digestório, responsável pela digestão dos alimentos e pela absorção de nutrientes.',
   urinario: 'Parte do sistema urinário, que forma, armazena e elimina a urina.',
   reprodutor: 'Parte do sistema reprodutor masculino.',
+  'reprodutor-feminino': 'Parte do sistema reprodutor feminino.',
   endocrino: 'Parte do sistema endócrino, formado por glândulas que liberam hormônios no sangue.',
   linfatico: 'Parte do sistema linfático, que participa da defesa do organismo e do retorno de líquidos ao sangue.',
 };
+
+// Organs modelled by BioLab 3D (kidneys, brain, female reproductive system).
+Object.assign(HUMAN_CONTENT, ORGAN_CONTENT);
 
 // Side-agnostic composites share the same text.
 HUMAN_CONTENT['mao-esq'] = HUMAN_CONTENT['mao-dir'];

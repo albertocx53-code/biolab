@@ -14,6 +14,7 @@
     "keys:list": "tsx --conditions=react-server scripts/keys.mts list",
     "keys:revoke": "tsx --conditions=react-server scripts/keys.mts revoke",
     "keys:export": "tsx --conditions=react-server scripts/keys.mts export",
+    "studio:renders": "tsx scripts/studio-renders.ts",
     "vercel:setup": "tsx --conditions=react-server scripts/vercel-setup.mts"
   },
   "engines": {
@@ -27,6 +28,7 @@
     "@react-three/postprocessing": "^3.2.2",
     "next": "^15.5.29",
     "postprocessing": "^6.39.6",
+    "pptxgenjs": "^4.0.1",
     "react": "19.1",
     "react-dom": "19.1",
     "server-only": "^0.0.1",

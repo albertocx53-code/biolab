@@ -5,7 +5,7 @@
  */
 import * as THREE from 'three';
 import type { CameraPreset } from '@/components/3d/CameraRig';
-import { ellipsoid, inside, merge, paint, rng, scaled, tangle, tube, wall, type Cut, type DistFn } from '@/laboratories/shared/geometry';
+import { ellipsoid, inside, merge, paint, refillWall, rng, scaled, tangle, tube, wall, type Cut, type DistFn } from '@/laboratories/shared/geometry';
 import type { MeshDef } from '@/laboratories/shared/types';
 
 export const MITOSIS_CUT: Cut = { center: 0.35, width: Math.PI / 2 };
@@ -42,11 +42,30 @@ export interface MitosisModel {
 
 const SEG: [number, number] = [72, 40];
 
+/** Two-tone membrane colour (outer darker, inner lighter) baked as vertex colours; survives in-place deformation. */
+export function paintMembrane(g: THREE.BufferGeometry, hs = SEG[1]) {
+  const pos = g.getAttribute('position');
+  const n = pos.count;
+  const arr = new Float32Array(n * 3);
+  const outer = new THREE.Color('#DFA384');
+  const inner = new THREE.Color('#F4D6C2');
+  // `wall` merges outer shell, inner shell, then cut faces: the first half of the shell vertices is the outer surface
+  const shellCount = Math.floor((n - (hs + 1) * 4) / 2);
+  for (let i = 0; i < n; i++) {
+    const c = i < shellCount ? outer : i < shellCount * 2 ? inner : outer;
+    arr[i * 3] = c.r;
+    arr[i * 3 + 1] = c.g;
+    arr[i * 3 + 2] = c.b;
+  }
+  g.setAttribute('color', new THREE.BufferAttribute(arr, 3));
+  return g;
+}
+
 export function buildMitosis(): MitosisModel {
   const r = rng(77);
   const meshes: MeshDef[] = [];
   const shape = cellShape(0, 0);
-  meshes.push({ id: 'membrana-plasmatica', structure: 'membrana-plasmatica', geometry: wall(shape, 0.975, MITOSIS_CUT, SEG) });
+  meshes.push({ id: 'membrana-plasmatica', structure: 'membrana-plasmatica', geometry: paintMembrane(wall(shape, 0.975, MITOSIS_CUT, SEG)) });
 
   const nd = ellipsoid(NUC_R, NUC_R * 0.92, NUC_R);
   const env = (radius: number) => paint(wall(scaled(nd, radius / NUC_R), 0.93, MITOSIS_CUT, [48, 28]), '#8C6BC4');
@@ -206,14 +225,18 @@ export function membraneShape(P: number) {
 
 /** Rewrites the membrane geometry in place (same topology as `wall`). */
 export function deformMembrane(geo: THREE.BufferGeometry, shape: DistFn) {
+  // in place, no allocation per frame; a topology mismatch (e.g. quality changed) falls back to a rebuild
+  if (refillWall(geo, shape, 0.975, MITOSIS_CUT, SEG)) return;
   const fresh = wall(shape, 0.975, MITOSIS_CUT, SEG);
   const src = fresh.getAttribute('position');
   const dst = geo.getAttribute('position') as THREE.BufferAttribute;
-  (dst.array as Float32Array).set(src.array as Float32Array);
-  dst.needsUpdate = true;
-  geo.computeVertexNormals();
-  geo.computeBoundingBox();
-  geo.computeBoundingSphere();
+  if (src.count === dst.count) {
+    (dst.array as Float32Array).set(src.array as Float32Array);
+    dst.needsUpdate = true;
+    geo.computeVertexNormals();
+    geo.computeBoundingBox();
+    geo.computeBoundingSphere();
+  }
   fresh.dispose();
 }
 

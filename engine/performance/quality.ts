@@ -11,25 +11,38 @@ export interface QualitySettings {
   /** Device-pixel-ratio range for the canvas. */
   dpr: [number, number];
   antialias: boolean;
-  /** Adaptive resolution allowed to drop under load. */
+  /** Resolution may drop to dpr[0] while the camera moves (restored at rest). */
   adaptive: boolean;
   environment: boolean;
+  /** Size of the procedural reflection map (px). Clearcoat/sheen look flat below 128. */
+  envResolution: 64 | 128 | 256;
   /** Hover highlighting needs a raycast per pointer move. */
   hover: boolean;
   /** Screen-space ambient occlusion (soft contact shadows between structures). */
   ao: boolean;
+  aoQuality: 'low' | 'medium' | 'high';
+  aoHalfRes: boolean;
+  /** MSAA samples of the post-processing composer (0 = off). */
+  multisampling: 0 | 4 | 8;
+  /** Multiplier for the segment counts of procedural geometry (1 = authored density). */
+  detail: number;
 }
 
 export const QUALITY: Record<QualityProfile, QualitySettings> = {
   economico: {
     label: 'Econômico',
-    description: 'Para computadores mais simples: resolução reduzida e sem sombreamento de contato.',
+    description: 'Para computadores mais simples: resolução e malhas reduzidas, sem sombreamento de contato.',
     dpr: [0.75, 1],
     antialias: false,
     adaptive: true,
     environment: true,
+    envResolution: 64,
     hover: false,
     ao: false,
+    aoQuality: 'low',
+    aoHalfRes: true,
+    multisampling: 0,
+    detail: 0.7,
   },
   equilibrado: {
     label: 'Equilibrado',
@@ -38,20 +51,45 @@ export const QUALITY: Record<QualityProfile, QualitySettings> = {
     antialias: true,
     adaptive: true,
     environment: true,
+    envResolution: 128,
     hover: true,
     ao: true,
+    aoQuality: 'medium',
+    aoHalfRes: true,
+    multisampling: 4,
+    detail: 1,
   },
   alta: {
     label: 'Alta Qualidade',
-    description: 'Máxima nitidez para computadores com placa de vídeo dedicada.',
+    description: 'Malhas mais densas, reflexos e oclusão em resolução plena. Para placas de vídeo dedicadas.',
     dpr: [1, 2],
     antialias: true,
     adaptive: false,
     environment: true,
+    envResolution: 256,
     hover: true,
     ao: true,
+    aoQuality: 'high',
+    aoHalfRes: false,
+    multisampling: 8,
+    detail: 1.25,
   },
 };
+
+// ---------------------------------------------------------------- geometry detail
+
+let currentDetail = 1;
+/** Sets the density multiplier used by procedural geometry builders (see `segs`). */
+export function setDetailScale(d: number) {
+  currentDetail = Math.max(0.4, Math.min(2, d));
+}
+export function detailScale() {
+  return currentDetail;
+}
+/** Scales an authored segment count by the current detail level (never below `min`). */
+export function segs(n: number, min = 6) {
+  return Math.max(min, Math.round(n * currentDetail));
+}
 
 export interface DeviceSignals {
   cores?: number;

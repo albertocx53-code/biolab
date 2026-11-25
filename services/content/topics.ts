@@ -9,6 +9,9 @@ import type { Structure } from '@/data/biology/schema';
 import type { StudioTopicRef } from '@/data/studio/contract';
 import { cellStructure } from '@/laboratories/cells/catalog';
 import { plantStructure } from '@/laboratories/plants/catalog';
+import { geneticsStructure } from '@/laboratories/genetics/catalog';
+import { microbeStructure } from '@/laboratories/microbes/catalog';
+import { animalStructure } from '@/laboratories/animals/catalog';
 import { buildHumanIndex, type HumanIndex, type RawHumanCatalog } from '@/laboratories/human/catalog';
 
 let human: Promise<HumanIndex> | null = null;
@@ -25,5 +28,8 @@ export async function resolveTopic(ref: StudioTopicRef): Promise<Structure | nul
   }
   if (ref.laboratoryId === 'celulas') return cellStructure(ref.structureId) ?? null;
   if (ref.laboratoryId === 'plantas') return plantStructure(ref.structureId) ?? null;
+  if (ref.laboratoryId === 'genetica') return geneticsStructure(ref.structureId) ?? null;
+  if (ref.laboratoryId === 'microrganismos') return microbeStructure(ref.structureId) ?? null;
+  if (ref.laboratoryId === 'animais') return animalStructure(ref.structureId) ?? null;
   return null; // other laboratories: catalogs arrive with their phases
 }

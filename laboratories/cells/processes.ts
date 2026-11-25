@@ -106,6 +106,19 @@ export const CELL_PROCESSES: Record<string, CellProcess> = {
     loop: true,
     steps: [{ title: 'Flagelo em rotação', text: 'Um motor de proteínas na base do flagelo, movido pelo fluxo de íons H⁺ através da membrana, faz o filamento girar como uma hélice e empurra a bactéria.', seconds: 8 }],
   },
+  fissao: {
+    id: 'fissao',
+    title: 'Fissão binária',
+    namedSteps: true,
+    structures: ['nucleoide', 'parede-celular-bacteriana', 'membrana-plasmatica', 'plasmideos'],
+    note: `${TIME} Em condições ideais, Escherichia coli se divide a cada 20 minutos.`,
+    steps: [
+      { title: 'Replicação do DNA', text: 'O cromossomo circular é copiado a partir da origem de replicação. As duas cópias ficam presas à membrana; os plasmídeos também se replicam.', seconds: 6 },
+      { title: 'Alongamento', text: 'A célula cresce e se alonga; as duas cópias do cromossomo são afastadas para lados opostos.', seconds: 6 },
+      { title: 'Formação do septo', text: 'A proteína FtsZ forma um anel no meio da célula; membrana e parede crescem para dentro e formam o septo.', seconds: 6 },
+      { title: 'Separação', text: 'O septo se completa e as duas células-filhas, geneticamente idênticas, se separam.', seconds: 5 },
+    ],
+  },
   mitose: {
     id: 'mitose',
     title: 'Mitose e citocinese',
@@ -119,6 +132,28 @@ export const CELL_PROCESSES: Record<string, CellProcess> = {
       { title: 'Anáfase', text: 'As cromátides-irmãs se separam e são puxadas para polos opostos. A célula se alonga.', seconds: 4 },
       { title: 'Telófase', text: 'Os cromossomos chegam aos polos e se descondensam; um novo envoltório nuclear se forma em volta de cada conjunto.', seconds: 4 },
       { title: 'Citocinese', text: 'O citoplasma se divide: nas células animais, um anel contrátil estrangula a célula ao meio, originando duas células-filhas geneticamente iguais.', seconds: 5 },
+    ],
+  },
+  meiose: {
+    id: 'meiose',
+    title: 'Meiose: duas divisões, quatro células haploides',
+    namedSteps: true,
+    structures: ['cromossomos-homologos', 'quiasma', 'cromatide-irma', 'fuso-mitotico', 'centrossomo', 'envoltorio-nuclear'],
+    note: `${TIME} Modelo com 2n = 4 (vermelho: origem materna; azul: origem paterna). Ocorre na formação dos gametas (espermatozoides e óvulos).`,
+    steps: [
+      { title: 'Interfase', text: 'Antes da meiose a célula duplica o DNA (fase S): cada cromossomo passa a ter duas cromátides-irmãs idênticas. A célula é diploide (2n = 4): dois pares de cromossomos homólogos.', seconds: 4 },
+      {
+        title: 'Prófase I',
+        text: 'Os cromossomos se condensam e os homólogos se emparelham (sinapse), formando tétrades. Cromátides de homólogos trocam pedaços: é o crossing-over, visível como quiasmas. O envoltório nuclear se desfaz e o fuso se forma.',
+        seconds: 7,
+      },
+      { title: 'Metáfase I', text: 'Os pares de homólogos (e não cromossomos isolados) se alinham na placa equatorial. A orientação de cada par é ao acaso: é a segregação independente, fonte de variabilidade.', seconds: 4 },
+      { title: 'Anáfase I', text: 'Os homólogos se separam e vão para polos opostos. As cromátides-irmãs continuam unidas pelo centrômero: cada polo recebe um cromossomo de cada par, ainda duplicado.', seconds: 4 },
+      { title: 'Telófase I', text: 'Chegando aos polos, os cromossomos podem se descondensar um pouco e o citoplasma se divide (citocinese I). Resultam duas células haploides (n = 2), cada uma com cromossomos duplicados. Não há nova duplicação de DNA.', seconds: 5 },
+      { title: 'Prófase II', text: 'Em cada célula-filha, os cromossomos voltam a se condensar e um novo fuso se forma, perpendicular ao primeiro. A meiose II é muito parecida com uma mitose.', seconds: 4 },
+      { title: 'Metáfase II', text: 'Os cromossomos (cada um com duas cromátides) se alinham na placa equatorial de cada célula.', seconds: 4 },
+      { title: 'Anáfase II', text: 'Agora os centrômeros se dividem e as cromátides-irmãs se separam, indo para polos opostos, como na mitose.', seconds: 4 },
+      { title: 'Telófase II', text: 'Formam-se quatro núcleos e o citoplasma se divide de novo (citocinese II). Resultam quatro células haploides (n = 2), geneticamente diferentes entre si por causa do crossing-over e da segregação independente.', seconds: 5 },
     ],
   },
 };

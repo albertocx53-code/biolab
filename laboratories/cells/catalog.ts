@@ -11,7 +11,7 @@ export { normalize } from '@/laboratories/shared/catalog';
 
 export const CELL_LAB_ID = 'celulas' as const;
 
-export type CellModelId = 'animal' | 'vegetal' | 'procariotica' | 'mitocondria' | 'cloroplasto' | 'mitose';
+export type CellModelId = 'animal' | 'vegetal' | 'procariotica' | 'mitocondria' | 'cloroplasto' | 'mitose' | 'meiose' | 'fissao';
 
 export interface CellModelInfo extends LabModelInfo<CellModelId> {
   kind: 'celula' | 'detalhe' | 'processo';
@@ -27,7 +27,9 @@ export const CELL_MODELS: CellModelInfo[] = [
     summary: 'Célula eucariótica sem parede celular, com centríolos e lisossomos.',
     structures: [
       'membrana-plasmatica',
+      'microvilosidades',
       'citoplasma',
+      'citoesqueleto',
       'nucleo',
       'envoltorio-nuclear',
       'nucleolo',
@@ -53,18 +55,23 @@ export const CELL_MODELS: CellModelInfo[] = [
     summary: 'Célula eucariótica com parede celular, cloroplastos e um grande vacúolo central.',
     structures: [
       'parede-celular',
+      'plasmodesmos',
       'membrana-plasmatica',
       'citoplasma',
+      'citoesqueleto',
       'vacuolo',
+      'tonoplasto',
       'nucleo',
       'envoltorio-nuclear',
       'nucleolo',
       'cromatina',
       'reticulo-endoplasmatico-rugoso',
+      'reticulo-endoplasmatico-liso',
       'ribossomos',
       'complexo-golgiense',
       'vesiculas',
       'cloroplastos',
+      'amiloplastos',
       'mitocondria',
       'peroxissomos',
     ],
@@ -76,8 +83,8 @@ export const CELL_MODELS: CellModelInfo[] = [
     short: 'Procariótica',
     kind: 'celula',
     realSize: 'cerca de 1 a 5 µm',
-    summary: 'Bactéria em forma de bastonete (bacilo): sem núcleo organizado e sem organelas membranosas.',
-    structures: ['capsula-bacteriana', 'parede-celular-bacteriana', 'membrana-plasmatica', 'citoplasma', 'nucleoide', 'plasmideos', 'ribossomos-70s', 'flagelo-bacteriano', 'fimbrias'],
+    summary: 'Bacilo Gram-negativo (como Escherichia coli): sem núcleo organizado e sem organelas membranosas, com envoltório de duas membranas.',
+    structures: ['capsula-bacteriana', 'membrana-externa', 'periplasma', 'parede-celular-bacteriana', 'membrana-plasmatica', 'citoplasma', 'nucleoide', 'plasmideos', 'ribossomos-70s', 'inclusoes', 'flagelo-bacteriano', 'fimbrias'],
     processes: ['flagelo'],
   },
   {
@@ -103,6 +110,16 @@ export const CELL_MODELS: CellModelInfo[] = [
     processes: ['fotossintese-cloro'],
   },
   {
+    id: 'fissao',
+    label: 'Fissão binária (bactéria)',
+    short: 'Fissão binária',
+    kind: 'processo',
+    realSize: 'bacilo de cerca de 2 µm de comprimento',
+    summary: 'Bactéria em forma de bastonete se dividindo por fissão binária: replicação do cromossomo circular, alongamento, septo e separação.',
+    structures: ['parede-celular-bacteriana', 'membrana-plasmatica', 'nucleoide', 'plasmideos', 'ribossomos-70s'],
+    processes: ['fissao'],
+  },
+  {
     id: 'mitose',
     label: 'Divisão celular (mitose)',
     short: 'Mitose',
@@ -111,6 +128,16 @@ export const CELL_MODELS: CellModelInfo[] = [
     summary: 'Célula animal simplificada (2n = 4) passando pelas fases da mitose e pela citocinese.',
     structures: ['membrana-plasmatica', 'envoltorio-nuclear', 'cromatina', 'cromatide-irma', 'centromero', 'fuso-mitotico', 'centrossomo'],
     processes: ['mitose'],
+  },
+  {
+    id: 'meiose',
+    label: 'Divisão celular (meiose)',
+    short: 'Meiose',
+    kind: 'processo',
+    realSize: 'célula de cerca de 10 a 30 µm',
+    summary: 'Célula diploide simplificada (2n = 4) passando pelas duas divisões da meiose, com crossing-over, até formar quatro células haploides.',
+    structures: ['membrana-plasmatica', 'envoltorio-nuclear', 'cromatina', 'cromossomos-homologos', 'cromatide-irma', 'quiasma', 'centromero', 'fuso-mitotico', 'centrossomo'],
+    processes: ['meiose'],
   },
 ];
 

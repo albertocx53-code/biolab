@@ -16,7 +16,11 @@ export interface Session {
   keyId: string;
   tier: Tier;
   expiresAt: number;
+  /** Open access (no access key): every feature is available. */
+  open?: boolean;
 }
+
+const OPEN_SESSION: Session = { sessionId: 'acesso-livre', keyId: 'acesso-livre', tier: 'completo', expiresAt: Number.MAX_SAFE_INTEGER, open: true };
 
 export async function issueSessionToken(keyId: string, tier: Tier): Promise<{ token: string; maxAge: number }> {
   const iat = Math.floor(Date.now() / 1000);
@@ -37,6 +41,7 @@ export const sessionCookieOptions = (maxAge: number) => ({
  * The tier is read from the key record, so a tier change takes effect immediately.
  */
 export async function getSession(): Promise<Session | null> {
+  if (authConfig.openAccess) return OPEN_SESSION;
   const jar = await cookies();
   const payload = await verifySession(jar.get(authConfig.sessionCookie)?.value, authConfig.sessionSecret);
   if (!payload) return null;

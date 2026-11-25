@@ -21,11 +21,99 @@ export interface MaterialSpec {
   doubleSide?: boolean;
   /** Use per-vertex colours baked into the geometry (multi-tone merged meshes). */
   vertexColors?: boolean;
+  /** Self-illumination (glowing particles, light-emitting structures). */
+  emissive?: string;
+  emissiveIntensity?: number;
+  /**
+   * Organic look for living tissue: procedural fine-grain colour/roughness
+   * variation and a soft translucent rim (fresnel) so surfaces read as wet,
+   * slightly see-through membranes instead of plastic.
+   */
+  organic?: OrganicSpec;
+}
+
+export interface OrganicSpec {
+  /** Strength of the colour/roughness grain, 0–1 (default 0.25). */
+  noise?: number;
+  /** Size of the grain in scene units (default 6 = ~0.17 units per cell). */
+  scale?: number;
+  /** Strength of the rim light, 0–1 (default 0.35). */
+  rim?: number;
+  rimColor?: string;
+  /** Rim falloff exponent (default 3). */
+  rimPower?: number;
+}
+
+/**
+ * GLSL patch applied through onBeforeCompile: 3D value noise on the object
+ * position (stable across frames, no textures) and a fresnel rim term.
+ */
+const ORGANIC_VERTEX = `
+varying vec3 vOrgPos;
+`;
+const ORGANIC_FRAGMENT = `
+uniform float uOrgNoise;
+uniform float uOrgScale;
+uniform float uOrgRim;
+uniform float uOrgRimPower;
+uniform vec3 uOrgRimColor;
+varying vec3 vOrgPos;
+float orgHash(vec3 p) {
+  p = fract(p * 0.3183099 + vec3(0.1, 0.2, 0.3));
+  p *= 17.0;
+  return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
+}
+float orgNoise(vec3 x) {
+  vec3 i = floor(x);
+  vec3 f = fract(x);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(
+    mix(mix(orgHash(i), orgHash(i + vec3(1, 0, 0)), f.x), mix(orgHash(i + vec3(0, 1, 0)), orgHash(i + vec3(1, 1, 0)), f.x), f.y),
+    mix(mix(orgHash(i + vec3(0, 0, 1)), orgHash(i + vec3(1, 0, 1)), f.x), mix(orgHash(i + vec3(0, 1, 1)), orgHash(i + vec3(1, 1, 1)), f.x), f.y),
+    f.z);
+}
+`;
+
+export function applyOrganic(m: THREE.MeshStandardMaterial, o: OrganicSpec) {
+  const uniforms = {
+    uOrgNoise: { value: o.noise ?? 0.25 },
+    uOrgScale: { value: o.scale ?? 6 },
+    uOrgRim: { value: o.rim ?? 0.35 },
+    uOrgRimPower: { value: o.rimPower ?? 3 },
+    uOrgRimColor: { value: new THREE.Color(o.rimColor ?? '#ffffff') },
+  };
+  m.onBeforeCompile = (shader) => {
+    Object.assign(shader.uniforms, uniforms);
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', `#include <common>\n${ORGANIC_VERTEX}`)
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvOrgPos = transformed;');
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', `#include <common>\n${ORGANIC_FRAGMENT}`)
+      .replace(
+        '#include <color_fragment>',
+        `#include <color_fragment>
+float orgN = orgNoise(vOrgPos * uOrgScale) * 0.62 + orgNoise(vOrgPos * uOrgScale * 3.7) * 0.38;
+diffuseColor.rgb *= 1.0 + uOrgNoise * (orgN * 2.0 - 1.0);`,
+      )
+      .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = clamp(roughnessFactor + (orgN - 0.5) * uOrgNoise * 0.7, 0.04, 1.0);')
+      .replace(
+        '#include <opaque_fragment>',
+        `float orgFres = pow(1.0 - saturate(dot(normalize(normal), normalize(vViewPosition))), uOrgRimPower);
+outgoingLight += uOrgRimColor * orgFres * uOrgRim;
+#include <opaque_fragment>`,
+      );
+  };
+  m.customProgramCacheKey = () => 'biolab-organic';
+  m.userData.organic = uniforms;
+  return m;
 }
 
 export class MaterialLibrary {
   private base = new Map<string, THREE.MeshStandardMaterial>();
   private opacity = new Map<string, number>();
+  private clipping = new Map<string, { planes: THREE.Plane[] | null; intersect: boolean; classes?: string[] }>();
+  private highlights = new WeakMap<THREE.Material, THREE.MeshStandardMaterial>();
+  private hovers = new WeakMap<THREE.Material, THREE.MeshStandardMaterial>();
   readonly highlight: THREE.MeshStandardMaterial;
   readonly hoverMat: THREE.MeshStandardMaterial;
   readonly ghost: THREE.MeshStandardMaterial;
@@ -50,6 +138,8 @@ export class MaterialLibrary {
         metalness: spec.metalness ?? 0,
         side: spec.doubleSide ? THREE.DoubleSide : THREE.FrontSide,
         vertexColors: !!spec.vertexColors,
+        emissive: new THREE.Color(spec.emissive ?? '#000000'),
+        emissiveIntensity: spec.emissiveIntensity ?? 1,
       };
       m = physical
         ? new THREE.MeshPhysicalMaterial({
@@ -61,16 +151,111 @@ export class MaterialLibrary {
             clearcoatRoughness: spec.clearcoatRoughness ?? 0.35,
           })
         : new THREE.MeshStandardMaterial(params);
+      if (spec.organic) applyOrganic(m, spec.organic);
       if (spec.polygonOffset) {
         m.polygonOffset = true;
         m.polygonOffsetFactor = -2;
         m.polygonOffsetUnits = -4;
       }
       m.userData.group = group;
+      m.userData.cls = cls;
       this.base.set(key, m);
       this.applyOpacity(m, this.opacity.get(group) ?? 1);
+      const clip = this.clipping.get(group);
+      if (clip?.planes && (!clip.classes || clip.classes.includes(cls))) this.applyClipping(m, clip.planes, clip.intersect);
     }
     return m;
+  }
+
+  /**
+   * Selection material derived from a mesh's own material: same colour and
+   * finish, lifted by a cyan glow and drawn with a depth test, so a selected
+   * organ keeps its shape and detail instead of becoming a flat silhouette.
+   */
+  highlightFor(base: THREE.Material): THREE.MeshStandardMaterial {
+    let h = this.highlights.get(base);
+    if (!h) {
+      h = (base as THREE.MeshStandardMaterial).clone();
+      h.emissive = new THREE.Color('#0EA5C6');
+      h.emissiveIntensity = 0.42;
+      h.color = (base as THREE.MeshStandardMaterial).color.clone().lerp(new THREE.Color('#5DD5EA'), 0.35);
+      h.transparent = false;
+      h.opacity = 1;
+      h.depthWrite = true;
+      h.side = THREE.DoubleSide;
+      h.polygonOffset = true;
+      h.polygonOffsetFactor = -1;
+      h.polygonOffsetUnits = -2;
+      h.onBeforeCompile = (base as THREE.MeshStandardMaterial).onBeforeCompile;
+      h.customProgramCacheKey = (base as THREE.MeshStandardMaterial).customProgramCacheKey;
+      h.userData.biolabHighlight = true;
+      h.clippingPlanes = (base as THREE.MeshStandardMaterial).clippingPlanes;
+      this.highlights.set(base, h);
+    }
+    return h;
+  }
+
+  hoverFor(base: THREE.Material): THREE.MeshStandardMaterial {
+    let h = this.hovers.get(base);
+    if (!h) {
+      h = (base as THREE.MeshStandardMaterial).clone();
+      h.emissive = new THREE.Color('#0EA5C6');
+      h.emissiveIntensity = 0.18;
+      h.onBeforeCompile = (base as THREE.MeshStandardMaterial).onBeforeCompile;
+      h.customProgramCacheKey = (base as THREE.MeshStandardMaterial).customProgramCacheKey;
+      h.userData.biolabHover = true;
+      h.clippingPlanes = (base as THREE.MeshStandardMaterial).clippingPlanes;
+      h.side = (base as THREE.MeshStandardMaterial).side;
+      this.hovers.set(base, h);
+    }
+    const b = base as THREE.MeshStandardMaterial;
+    if (h.opacity !== b.opacity || h.transparent !== b.transparent) {
+      h.opacity = b.opacity;
+      h.transparent = b.transparent;
+      h.depthWrite = b.depthWrite;
+      h.needsUpdate = true;
+    }
+    return h;
+  }
+
+  isHighlight(m: THREE.Material) {
+    return m === this.highlight || (m as THREE.MeshStandardMaterial).userData?.biolabHighlight === true;
+  }
+
+  /**
+   * Cut-away for one group: every material of the group (and its selection
+   * clones) is clipped by the planes; faces are drawn on both sides so the
+   * inside of hollow organs stays visible. `null` removes the cut.
+   */
+  /**
+   * Clips every material of a group. With `intersect`, only the region on the
+   * clipped side of *all* planes is removed (a box-shaped cut-away), so the
+   * rest of the group stays whole. `classes` limits the cut to some material
+   * classes of the group (e.g. the kidneys but not the ureters).
+   */
+  setGroupClipping(group: string, planes: THREE.Plane[] | null, intersect = false, classes?: string[]) {
+    this.clipping.set(group, { planes, intersect, classes });
+    for (const m of this.base.values()) {
+      if (m.userData.group !== group) continue;
+      const on = planes && (!classes || classes.includes(m.userData.cls));
+      this.applyClipping(m, on ? planes : null, intersect);
+    }
+  }
+
+  private applyClipping(m: THREE.MeshStandardMaterial, planes: THREE.Plane[] | null, intersect: boolean) {
+    const targets = [m, this.highlights.get(m), this.hovers.get(m)].filter(Boolean) as THREE.MeshStandardMaterial[];
+    for (const t of targets) {
+      t.clippingPlanes = planes;
+      t.clipIntersection = !!planes && intersect;
+      if (planes) {
+        t.userData.sideBeforeClip ??= t.side;
+        t.side = THREE.DoubleSide;
+      } else if (t.userData.sideBeforeClip !== undefined) {
+        t.side = t.userData.sideBeforeClip;
+        delete t.userData.sideBeforeClip;
+      }
+      t.needsUpdate = true;
+    }
   }
 
   setGroupOpacity(group: string, opacity: number) {
@@ -87,7 +272,11 @@ export class MaterialLibrary {
   }
 
   dispose() {
-    for (const m of this.base.values()) m.dispose();
+    for (const m of this.base.values()) {
+      this.highlights.get(m)?.dispose();
+      this.hovers.get(m)?.dispose();
+      m.dispose();
+    }
     this.base.clear();
     this.highlight.dispose();
     this.hoverMat.dispose();

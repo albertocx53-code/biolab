@@ -7,18 +7,21 @@ import { LabCanvas } from '@/components/3d/LabCanvas';
 import { SceneSync } from '@/components/3d/SceneSync';
 import { SelectionLabel } from '@/components/3d/SelectionLabel';
 import { LayersPanel } from '@/components/laboratory/LayersPanel';
+import { LessonsPanel } from '@/components/laboratory/LessonsPanel';
 import { ScientificPanel } from '@/components/laboratory/ScientificPanel';
+import { lessonsFor, type LessonAction } from '@/data/biology/lessons';
 import { SearchBox, type SearchBoxHandle } from '@/components/laboratory/SearchBox';
 import { QualityMenu } from '@/components/laboratory/QualityMenu';
 import { ViewerToolbar, type ViewButton } from '@/components/laboratory/ViewerToolbar';
 import { ShortcutsHelp } from '@/components/presentation/ShortcutsHelp';
 import { useFullscreen } from '@/components/presentation/useFullscreen';
-import { Icon } from '@/components/ui/Icon';
+import { Icon, type IconName } from '@/components/ui/Icon';
 import { Logo } from '@/components/ui/Logo';
+import { useShallow } from 'zustand/react/shallow';
 import { useViewer } from '@/engine/store';
 import { meshRegistry } from '@/engine/selection/registry';
 import { MaterialLibrary, type MaterialSpec } from '@/engine/visibility/materials';
-import { isWebGLAvailable, loadSavedQuality, pickDefaultQuality, readDeviceSignals } from '@/engine/performance/quality';
+import { isWebGLAvailable, loadSavedQuality, pickDefaultQuality, QUALITY, readDeviceSignals, setDetailScale } from '@/engine/performance/quality';
 import type { CatalogGroup } from '@/engine/types';
 import type { Structure } from '@/data/biology/schema';
 import type { LabCatalog } from './catalog';
@@ -87,6 +90,8 @@ export interface ProceduralLabConfig {
   /** Models that open with a process ready to play (paused). */
   autoProcess?: Record<string, string>;
   groupName?(id: string): string | undefined;
+  /** Classroom tools shown as buttons in the top bar, each opening a side panel (e.g. a Punnett square). */
+  tools?: { id: string; label: string; icon: IconName; render: (close: () => void) => ReactNode }[];
 }
 
 export function ProceduralLab({ config: cfg, canUseStudio, tierLabel }: { config: ProceduralLabConfig; canUseStudio: boolean; tierLabel: string }) {
@@ -98,20 +103,69 @@ export function ProceduralLab({ config: cfg, canUseStudio, tierLabel }: { config
   const [dark, setDark] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
+  const [lessonsOpen, setLessonsOpen] = useState(false);
+  const [lessonId, setLessonId] = useState<string | null>(null);
+  const [toolId, setToolId] = useState<string | null>(null);
+  const tool = cfg.tools?.find((t) => t.id === toolId) ?? null;
+  const pendingProcess = useRef<string | null>(null);
+  const lessons = useMemo(() => lessonsFor(catalog.labId), [catalog]);
   const [sideOpen, setSideOpen] = useState(false);
   const [focusMesh, setFocusMesh] = useState<string | null>(null);
   const pending = useRef<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<SearchBoxHandle>(null);
   const fs = useFullscreen(rootRef);
-  const s = useViewer();
+  // Only the slices this component renders: orbiting (zoom readout), camera commands and model
+  // load state change many times a second and must not re-render the whole laboratory UI.
+  const s = useViewer(
+    useShallow((st) => ({
+      selectedId: st.selectedId,
+      hoveredMeshId: st.hoveredMeshId,
+      presentation: st.presentation,
+      uiHidden: st.uiHidden,
+      quality: st.quality,
+      labels: st.labels,
+    })),
+  );
   const processId = useProcess((p) => p.id);
 
   const library = useMemo(() => new MaterialLibrary(cfg.materials, cfg.fallback), [cfg]);
   useEffect(() => () => library.dispose(), [library]);
 
+  // The quality profile decides the mesh density, so it is settled before the first model is built
+  // (saved choice, else device detection). Runs once per mount, client only.
+  useState(() => {
+    if (typeof window === 'undefined') return null;
+    useViewer.getState().setQuality(loadSavedQuality() ?? pickDefaultQuality(readDeviceSignals()));
+    return null;
+  });
+  const detail = QUALITY[s.quality].detail;
+
   const info = catalog.model(modelId)!;
-  const scene = useMemo(() => cfg.buildScene(modelId), [cfg, modelId]);
+  // Built models are kept for the life of the laboratory: switching back to a model costs nothing,
+  // and a quality change (new detail level) builds a fresh set.
+  const sceneCache = useRef(new Map<string, LabScene>());
+  const scene = useMemo(() => {
+    const key = `${modelId}@${detail}`;
+    let sc = sceneCache.current.get(key);
+    if (!sc) {
+      setDetailScale(detail);
+      sc = cfg.buildScene(modelId);
+      sceneCache.current.set(key, sc);
+    }
+    return sc;
+  }, [cfg, modelId, detail]);
+  useEffect(() => {
+    const cache = sceneCache.current;
+    return () => {
+      for (const sc of cache.values())
+        for (const m of sc.meshes) {
+          m.geometry.disposeBoundsTree?.();
+          m.geometry.dispose();
+        }
+      cache.clear();
+    };
+  }, []);
   const preset = scene.preset;
 
   const groups: CatalogGroup[] = useMemo(
@@ -152,7 +206,6 @@ export function ProceduralLab({ config: cfg, canUseStudio, tierLabel }: { config
     try {
       setDark(localStorage.getItem(THEME_KEY) === 'dark');
     } catch {}
-    useViewer.getState().setQuality(loadSavedQuality() ?? pickDefaultQuality(readDeviceSignals()));
     const q = new URLSearchParams(location.search).get('modelo');
     if (q && catalog.model(q)) setModelId(q);
     return () => {
@@ -174,6 +227,11 @@ export function ProceduralLab({ config: cfg, canUseStudio, tierLabel }: { config
       const id = pending.current;
       pending.current = null;
       setTimeout(() => selectStructureRef.current(id), 120);
+    }
+    if (pendingProcess.current) {
+      const pid = pendingProcess.current;
+      pendingProcess.current = null;
+      if (info.processes.includes(pid)) setTimeout(() => useProcess.getState().start(pid), 120);
     }
   }, [groups, modelId, info]);
 
@@ -208,6 +266,48 @@ export function ProceduralLab({ config: cfg, canUseStudio, tierLabel }: { config
   );
   const selectStructureRef = useRef(selectStructure);
   selectStructureRef.current = selectStructure;
+
+  /** A button of a lesson script: show a structure, start an animation or open another model. */
+  const runLessonAction = useCallback(
+    (a: LessonAction) => {
+      if (a.tool && cfg.tools?.some((t) => t.id === a.tool)) {
+        setLessonsOpen(false);
+        setToolId(a.tool);
+        return;
+      }
+      if (a.model && a.model !== modelId && catalog.model(a.model)) switchModel(a.model);
+      if (a.structure) selectStructure(a.structure);
+      if (a.process) {
+        const p = useProcess.getState();
+        if (p.id === a.process) {
+          p.stop();
+          return;
+        }
+        if (info.processes.includes(a.process) && !(a.model && a.model !== modelId)) p.start(a.process);
+        else {
+          const target = a.model && catalog.model(a.model) ? a.model : catalog.models.find((m) => m.processes.includes(a.process!))?.id;
+          if (target && target !== modelId) {
+            pendingProcess.current = a.process;
+            switchModel(target);
+          }
+        }
+      }
+    },
+    [catalog, cfg.tools, info, modelId, selectStructure, switchModel],
+  );
+
+  // Read-only hooks used by the Studio render script (scripts/studio-renders.ts) to stage lesson images.
+  const studioHook = useRef({ runLessonAction, modelId, structureOfMesh });
+  studioHook.current = { runLessonAction, modelId, structureOfMesh };
+  useEffect(() => {
+    const w = window as unknown as { __biolab?: Record<string, unknown> };
+    w.__biolab = {
+      ...(w.__biolab ?? {}),
+      lesson: (a: LessonAction) => studioHook.current.runLessonAction(a),
+      model: () => studioHook.current.modelId,
+      structureOf: (meshId: string) => studioHook.current.structureOfMesh.get(meshId) ?? null,
+    };
+  }, []);
 
   const onPick = useCallback(
     (meshId: string) => {
@@ -344,7 +444,7 @@ export function ProceduralLab({ config: cfg, canUseStudio, tierLabel }: { config
 
   const pres = s.presentation;
   const hideUi = s.uiHidden;
-  const showRight = !hideUi && panelOpen && !!selected;
+  const showRight = !hideUi && ((panelOpen && !!selected) || lessonsOpen || !!tool);
   const toggleTheme = () =>
     setDark((d) => {
       try {
@@ -419,6 +519,30 @@ export function ProceduralLab({ config: cfg, canUseStudio, tierLabel }: { config
               <Icon name={dark ? 'sun' : 'moon'} size={17} />
             </button>
             <QualityMenu />
+            {lessons.length > 0 && (
+              <button type="button" className={`btn h-10 rounded-full ${lessonsOpen ? 'btn-primary' : 'btn-ghost'}`} onClick={() => {
+                  setToolId(null);
+                  setLessonsOpen((v) => !v);
+                }} aria-pressed={lessonsOpen} title="Roteiros de aula" data-testid="lessons-toggle">
+                <Icon name="book" size={16} /> <span className="hidden sm:inline">Aulas</span>
+              </button>
+            )}
+            {cfg.tools?.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                className={`btn h-10 rounded-full ${toolId === t.id ? 'btn-primary' : 'btn-ghost'}`}
+                onClick={() => {
+                  setLessonsOpen(false);
+                  setToolId((v) => (v === t.id ? null : t.id));
+                }}
+                aria-pressed={toolId === t.id}
+                title={t.label}
+                data-testid={`tool-${t.id}`}
+              >
+                <Icon name={t.icon} size={16} /> <span className="hidden 2xl:inline">{t.label}</span>
+              </button>
+            ))}
             <button type="button" className="icon-btn hidden rounded-full sm:inline-grid" onClick={() => setShowHelp(true)} aria-label="Atalhos de teclado" title="Atalhos (?)">
               <Icon name="keyboard" />
             </button>
@@ -440,11 +564,11 @@ export function ProceduralLab({ config: cfg, canUseStudio, tierLabel }: { config
         <aside className={`float-card absolute top-20 left-3 z-20 flex max-h-[calc(100%-11rem)] w-[264px] flex-col sm:left-4 ${sideOpen || pres ? '' : 'max-lg:hidden'}`} aria-label="Modelos e estruturas" data-testid={`${cfg.testPrefix}-sidebar`}>
           <div className="border-b border-line p-3">
             <p className="eyebrow mb-2 px-1">Modelo</p>
-            {cfg.modelRows.map((row, ri) => (
-              <div key={row.kind} className={`grid grid-cols-3 gap-1 ${ri ? 'mt-1' : ''}`} role="radiogroup" aria-label={row.label}>
-                {catalog.models
-                  .filter((m) => row.kind.split('|').includes(m.kind))
-                  .map((m) => (
+            {cfg.modelRows.map((row, ri) => {
+              const items = catalog.models.filter((m) => row.kind.split('|').includes(m.kind));
+              return (
+              <div key={row.kind} className={`grid ${items.length % 3 && items.length % 2 === 0 ? 'grid-cols-2' : 'grid-cols-3'} gap-1 ${ri ? 'mt-1' : ''}`} role="radiogroup" aria-label={row.label}>
+                {items.map((m) => (
                     <button
                       key={m.id}
                       type="button"
@@ -461,7 +585,8 @@ export function ProceduralLab({ config: cfg, canUseStudio, tierLabel }: { config
                     </button>
                   ))}
               </div>
-            ))}
+              );
+            })}
             <div className="mt-3 px-1">
               <p className={`font-semibold ${pres ? 'text-lg' : 'text-[14px]'}`} data-testid={`${cfg.testPrefix}-model-title`}>
                 {info.label}
@@ -525,8 +650,35 @@ export function ProceduralLab({ config: cfg, canUseStudio, tierLabel }: { config
       {!hideUi && processId && <ProcessPlayer processes={processes} large={pres} docked={!showRight} />}
       {!hideUi && <ViewerToolbar views={VIEWS} />}
 
+      {/* ---------- classroom tool */}
+      {showRight && tool && (
+        <aside className={`float-card absolute z-20 overflow-hidden max-lg:inset-x-2 max-lg:bottom-2 max-lg:h-[60%] lg:top-20 lg:right-4 lg:bottom-20 ${pres ? 'lg:w-[520px]' : 'lg:w-[440px]'}`} aria-label={tool.label} data-testid="tool-panel">
+          {tool.render(() => setToolId(null))}
+        </aside>
+      )}
+
+      {/* ---------- lessons panel */}
+      {showRight && !tool && lessonsOpen && (
+        <aside className={`float-card absolute z-20 overflow-hidden max-lg:inset-x-2 max-lg:bottom-2 max-lg:h-[55%] lg:top-20 lg:right-4 lg:bottom-20 ${pres ? 'lg:w-[460px]' : 'lg:w-[400px]'}`}>
+          <LessonsPanel
+            lessons={lessons}
+            lessonId={lessonId}
+            onLesson={setLessonId}
+            onAction={runLessonAction}
+            onClose={() => setLessonsOpen(false)}
+            selectedName={selected?.namePtBR ?? null}
+            onOpenSelected={() => {
+              setLessonsOpen(false);
+              setPanelOpen(true);
+            }}
+            large={pres}
+            activeProcess={processId}
+          />
+        </aside>
+      )}
+
       {/* ---------- scientific panel */}
-      {showRight && selected && (
+      {showRight && !tool && !lessonsOpen && selected && (
         <aside className={`float-card absolute z-20 overflow-hidden max-lg:inset-x-2 max-lg:bottom-2 max-lg:h-[55%] lg:top-20 lg:right-4 lg:bottom-20 ${pres ? 'lg:w-[440px]' : 'lg:w-[380px]'}`}>
           <ScientificPanel
             structure={selected}

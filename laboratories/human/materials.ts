@@ -6,7 +6,9 @@ import type { MaterialSpec } from '@/engine/visibility/materials';
  */
 const ORGAN = { roughness: 0.42, clearcoat: 0.35, clearcoatRoughness: 0.4 };
 export const HUMAN_MATERIALS: Record<string, MaterialSpec> = {
-  pele: { color: '#D9A88A', roughness: 0.58, sheen: 0.6, sheenColor: '#F6D2BE', polygonOffset: true },
+  // skin: warm tone, soft velvet sheen, fine pore grain and a faint warm rim that stands in for subsurface scattering
+  pele: { color: '#D8A287', roughness: 0.52, sheen: 0.42, sheenColor: '#FFD9C4', clearcoat: 0.06, clearcoatRoughness: 0.6, polygonOffset: true, organic: { noise: 0.07, scale: 55, rim: 0.14, rimColor: '#FFB59A', rimPower: 2.6 } },
+  'pele-genital': { color: '#D8A287', roughness: 0.52, sheen: 0.42, sheenColor: '#FFD9C4', clearcoat: 0.06, clearcoatRoughness: 0.6, polygonOffset: true, organic: { noise: 0.07, scale: 55, rim: 0.14, rimColor: '#FFB59A', rimPower: 2.6 } },
   osso: { color: '#EAE0CC', roughness: 0.55, clearcoat: 0.08 },
   dente: { color: '#F6F2E8', roughness: 0.25, clearcoat: 0.6 },
   cartilagem: { color: '#C7DCE4', roughness: 0.35, clearcoat: 0.45 },
@@ -15,10 +17,10 @@ export const HUMAN_MATERIALS: Record<string, MaterialSpec> = {
   ligamento: { color: '#DED3BF', roughness: 0.45, sheen: 0.3 },
   fascia: { color: '#E0D0BC', roughness: 0.5, sheen: 0.3 },
   bursa: { color: '#CFDDE8', ...ORGAN },
-  miocardio: { color: '#A72C27', roughness: 0.45, sheen: 0.6, sheenColor: '#E8857A', clearcoat: 0.3 },
+  miocardio: { color: '#B83A31', roughness: 0.42, sheen: 0.6, sheenColor: '#F0948A', clearcoat: 0.35, organic: { noise: 0.16, scale: 90, rim: 0.25, rimColor: '#FFD9D2', rimPower: 3 } },
   valva: { color: '#EBD4BB', ...ORGAN },
-  arteria: { color: '#C2302A', ...ORGAN },
-  veia: { color: '#2F5AA8', ...ORGAN },
+  arteria: { color: '#CC3129', ...ORGAN, organic: { noise: 0.1, scale: 120, rim: 0.3, rimColor: '#FFD0CB', rimPower: 3 } },
+  veia: { color: '#2F5AA8', ...ORGAN, organic: { noise: 0.1, scale: 120, rim: 0.3, rimColor: '#CFE0FF', rimPower: 3 } },
   nervo: { color: '#E6C34A', roughness: 0.4, clearcoat: 0.25 },
   olho: { color: '#EEF3F6', roughness: 0.15, clearcoat: 1, clearcoatRoughness: 0.05 },
   medula: { color: '#EFE6D6', ...ORGAN },
@@ -37,5 +39,27 @@ export const HUMAN_MATERIALS: Record<string, MaterialSpec> = {
   'glandula-endocrina': { color: '#A981D6', ...ORGAN },
   'orgao-linfoide': { color: '#7A3646', ...ORGAN },
   linfonodo: { color: '#5DB988', ...ORGAN },
+  // organs modelled by BioLab (laboratories/human/organs.ts)
+  'cortex-renal': { color: '#B0624C', ...ORGAN, organic: { noise: 0.12, scale: 140, rim: 0.2, rimColor: '#F2B8A8', rimPower: 3 } },
+  'medula-renal': { color: '#73232B', ...ORGAN, organic: { noise: 0.22, scale: 260, rim: 0.1, rimColor: '#F2C0B0', rimPower: 3 } },
+  'pelve-renal': { color: '#E2C27A', ...ORGAN },
+  'lobo-frontal': { color: '#E9B6AC', roughness: 0.5, sheen: 0.4, sheenColor: '#FFE4DC', clearcoat: 0.25, organic: { noise: 0.1, scale: 160, rim: 0.2, rimColor: '#FFF0EA', rimPower: 3 } },
+  'lobo-parietal': { color: '#E3C2A6', roughness: 0.5, sheen: 0.4, sheenColor: '#FFE9D8', clearcoat: 0.25, organic: { noise: 0.1, scale: 160, rim: 0.2, rimColor: '#FFF3E6', rimPower: 3 } },
+  'lobo-temporal': { color: '#DFA9B2', roughness: 0.5, sheen: 0.4, sheenColor: '#FFE0E6', clearcoat: 0.25, organic: { noise: 0.1, scale: 160, rim: 0.2, rimColor: '#FFEFF2', rimPower: 3 } },
+  'lobo-occipital': { color: '#D6B3C9', roughness: 0.5, sheen: 0.4, sheenColor: '#F6E2F0', clearcoat: 0.25, organic: { noise: 0.1, scale: 160, rim: 0.2, rimColor: '#FBF0F7', rimPower: 3 } },
+  cerebelo: { color: '#D49B8E', roughness: 0.5, sheen: 0.4, sheenColor: '#FFE0D8', clearcoat: 0.25, organic: { noise: 0.12, scale: 200, rim: 0.2, rimColor: '#FFEDE8', rimPower: 3 } },
+  'tronco-encefalico': { color: '#D8B49C', ...ORGAN },
+  'substancia-branca': { color: '#F4EEE4', ...ORGAN },
+  talamo: { color: '#C99A8A', ...ORGAN },
+  hipotalamo: { color: '#B98CE0', ...ORGAN },
+  ventriculo: { color: '#6FA8DC', roughness: 0.2, clearcoat: 0.8, clearcoatRoughness: 0.1 },
+  utero: { color: '#C9666E', ...ORGAN, organic: { noise: 0.1, scale: 120, rim: 0.25, rimColor: '#FFD3D6', rimPower: 3 } },
+  'colo-do-utero': { color: '#D98A90', ...ORGAN },
+  'tuba-uterina': { color: '#E39AA0', ...ORGAN },
+  ovario: { color: '#EAC8B0', ...ORGAN, organic: { noise: 0.2, scale: 300, rim: 0.2, rimColor: '#FFF1E6', rimPower: 3 } },
+  vagina: { color: '#D98C95', ...ORGAN },
+  vulva: { color: '#C9727C', ...ORGAN },
+  'glandula-mamaria': { color: '#E7A9A0', ...ORGAN, organic: { noise: 0.15, scale: 220, rim: 0.2, rimColor: '#FFE6E0', rimPower: 3 } },
+  areola: { color: '#A8665A', roughness: 0.55, sheen: 0.5, sheenColor: '#E8B9A8', polygonOffset: true },
 };
 export const HUMAN_FALLBACK: MaterialSpec = { color: '#C8CED6', roughness: 0.55 };

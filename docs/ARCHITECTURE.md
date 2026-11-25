@@ -40,8 +40,20 @@ tools/blender/            Exportação do Z-Anatomy
 - **Seleção:** raycast acelerado por BVH; ignora camadas quase transparentes (pele).
 - **Ciclo de vida:** descarte adiado para sobreviver ao modo estrito do React; ao sair, geometrias e
   materiais são liberados (verificado por teste).
-- **Qualidade:** perfis Econômico/Equilibrado/Alta Qualidade escolhidos pelo hardware e ajustados
-  pelo `PerformanceMonitor`; renderização sob demanda.
+- **Qualidade:** perfis Econômico/Equilibrado/Alta Qualidade escolhidos pelo hardware
+  (`engine/performance/quality.ts`). Cada perfil define resolução (DPR), MSAA do compositor,
+  resolução do mapa de reflexos, qualidade da oclusão ambiente e o **fator de detalhe** das malhas
+  procedurais (`segs()`, lido por `laboratories/shared/geometry.ts`). Em Econômico/Equilibrado a
+  resolução cai só enquanto a câmera se move (`regress` + `AdaptiveDpr`) e volta em repouso.
+- **Renderização sob demanda de verdade:** `frameloop="demand"`; `ProcessDriver` só pede quadros
+  enquanto uma animação está tocando (ou declara `idle`); `SceneSync` aplica mudanças por diferença
+  (hover e seleção tocam só as malhas envolvidas) e o registro de malhas notifica uma vez por lote;
+  os componentes dos laboratórios leem fatias do store com `useShallow`, nunca o store inteiro.
+- **Modelos procedurais:** construídos uma vez por laboratório e nível de detalhe (cache em
+  `ProceduralLab`); BVH de seleção montado depois da primeira pintura, em fatias ociosas; membranas
+  animadas reescrevem a geometria no lugar (`refillWall`), sem alocar por quadro.
+- **Diagnóstico:** `?stats=1` em qualquer laboratório mostra fps, chamadas de desenho e triângulos
+  do quadro inteiro (0 fps em repouso é o esperado).
 
 ## Acesso
 

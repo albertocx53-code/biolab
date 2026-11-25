@@ -9,3 +9,5 @@ test-results/
 playwright-report/
 *.tsbuildinfo
 next-env.d.ts
+.next-dev/
+.next-perf/

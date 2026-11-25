@@ -36,3 +36,21 @@ test('laboratório de Plantas em celular: sem rolagem horizontal e menu de model
   await page.getByRole('radio', { name: 'Flor' }).click();
   await expect(page.getByTestId('plant-model-title')).toHaveText('Flor completa');
 });
+
+test('Studio em celular: geradores em faixa, folha e mapa mental sem rolagem horizontal', async ({ page }) => {
+  await login(page, 'completo');
+  const overflow = () => page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  await page.goto('/studio?aula=teoria-celular');
+  const slides = page.getByTestId('studio-tool-slides');
+  const activity = page.getByTestId('studio-tool-atividades');
+  await expect(slides).toBeVisible();
+  // the five generators share one row instead of filling the first screen
+  expect(Math.abs((await slides.boundingBox())!.y - (await activity.boundingBox())!.y)).toBeLessThan(4);
+  expect(await overflow()).toBeLessThanOrEqual(1);
+  await activity.click();
+  await expect(page.getByTestId('studio-activity')).toBeVisible();
+  expect(await overflow()).toBeLessThanOrEqual(1);
+  await page.getByTestId('studio-tool-mapas-mentais').click();
+  await expect(page.getByTestId('studio-mindmap')).toBeVisible();
+  expect(await overflow()).toBeLessThanOrEqual(1);
+});
