@@ -26,7 +26,7 @@ export const SearchBox = forwardRef<SearchBoxHandle, { search: (q: string) => St
 
     return (
       <div className={`relative ${compact ? 'w-72 max-w-[42vw]' : 'w-full max-w-md'}`}>
-        <div className="flex h-11 items-center gap-2 rounded-full border border-line bg-ink-850/90 px-4 shadow-[var(--shadow-panel)] backdrop-blur focus-within:border-line-strong">
+        <div className="glass flex h-11 items-center gap-2 rounded-full px-4 transition-colors focus-within:border-cyan/60">
           <Icon name="search" size={16} className="text-fg-subtle" />
           <input
             ref={input}
