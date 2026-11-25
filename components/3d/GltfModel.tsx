@@ -4,9 +4,11 @@ import { useGLTF } from '@react-three/drei';
 import { useThree, type ThreeEvent } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
+import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from 'three-mesh-bvh';
 import type { CatalogMesh, CatalogModel } from '@/engine/types';
 import type { MaterialLibrary } from '@/engine/visibility/materials';
+import { interaction } from '@/engine/interaction';
 import { meshRegistry } from '@/engine/selection/registry';
 import { useViewer } from '@/engine/store';
 
@@ -79,11 +81,28 @@ export function GltfModel({ model, meshInfo, library, hover, onPick }: Props) {
   return <ModelScene root={root} modelId={model.id} library={library} hover={hover} onPick={onPick} />;
 }
 
+/** Material classes exported as several body regions merged into one mesh (seams must be welded). */
+const WELDED = new Set(['pele', 'pele-genital']);
+
 /** Assigns the shared material and picking data to one catalog mesh. */
 export function prepareMesh(mesh: THREE.Mesh, id: string, meshInfo: Map<string, CatalogMesh>, library: MaterialLibrary) {
   const info = meshInfo.get(id);
   const group = info?.group ?? 'outros';
-  const mat = library.get(group, info?.material ?? 'default');
+  const cls = info?.material ?? 'default';
+  const mat = library.get(group, cls);
+  if (WELDED.has(cls) && !mesh.geometry.userData.welded) {
+    // The atlas skin is a merge of separate region meshes: their border vertices are duplicated, so the
+    // shading normals break at every border and draw dark seams across the body. Welding the shared
+    // vertices and recomputing the normals makes the surface continuous.
+    // (normals and uvs differ across the seam and would prevent the weld; both are rebuilt / unused)
+    mesh.geometry.deleteAttribute('normal');
+    mesh.geometry.deleteAttribute('uv');
+    const welded = mergeVertices(mesh.geometry, 1e-4);
+    welded.computeVertexNormals();
+    welded.userData.welded = true;
+    mesh.geometry.dispose();
+    mesh.geometry = welded;
+  }
   mesh.name = id;
   mesh.userData.meshId = id;
   mesh.userData.group = group;
@@ -131,6 +150,7 @@ export function ModelScene({ root, modelId, library, hover, onPick }: { root: TH
 
   const handleMove = hover
     ? (e: ThreeEvent<PointerEvent>) => {
+        if (interaction.cameraMoving) return; // orbiting: no hover work
         const now = performance.now();
         if (now - lastHover.current < 50) return;
         lastHover.current = now;

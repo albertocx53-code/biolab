@@ -27,8 +27,11 @@ export interface ViewerState {
    * does not bring them back.
    */
   excludedMeshIds: Record<string, true>;
-  /** When set, everything except these meshes is ghosted. */
+  /** When set, everything except these meshes is ghosted ('ghost') or not drawn at all ('solo'). */
   isolatedMeshIds: string[] | null;
+  isolationMode: 'ghost' | 'solo';
+  /** Meshes shown even when their group is off (e.g. the eyes while the skin is on). */
+  pinnedMeshIds: Record<string, true>;
   quality: QualityProfile;
   presentation: boolean;
   uiHidden: boolean;
@@ -46,7 +49,8 @@ export interface ViewerState {
   hideMeshes(ids: string[]): void;
   showAll(): void;
   setExcluded(ids: string[]): void;
-  isolate(ids: string[] | null): void;
+  isolate(ids: string[] | null, mode?: 'ghost' | 'solo'): void;
+  setPinned(ids: string[]): void;
   setQuality(q: QualityProfile): void;
   setPresentation(on: boolean): void;
   toggleUi(): void;
@@ -65,6 +69,8 @@ export const useViewer = create<ViewerState>((set) => ({
   hiddenMeshIds: {},
   excludedMeshIds: {},
   isolatedMeshIds: null,
+  isolationMode: 'ghost',
+  pinnedMeshIds: {},
   quality: 'equilibrado',
   presentation: false,
   uiHidden: false,
@@ -92,7 +98,8 @@ export const useViewer = create<ViewerState>((set) => ({
   hideMeshes: (ids) => set((s) => ({ hiddenMeshIds: { ...s.hiddenMeshIds, ...Object.fromEntries(ids.map((i) => [i, true as const])) } })),
   showAll: () => set({ hiddenMeshIds: {}, isolatedMeshIds: null }),
   setExcluded: (ids) => set({ excludedMeshIds: Object.fromEntries(ids.map((i) => [i, true as const])) }),
-  isolate: (ids) => set({ isolatedMeshIds: ids && ids.length ? ids : null }),
+  isolate: (ids, mode = 'ghost') => set({ isolatedMeshIds: ids && ids.length ? ids : null, isolationMode: mode }),
+  setPinned: (ids) => set({ pinnedMeshIds: Object.fromEntries(ids.map((i) => [i, true as const])) }),
   setQuality: (quality) => set({ quality }),
   setPresentation: (presentation) => set({ presentation, uiHidden: false }),
   toggleUi: () => set((s) => ({ uiHidden: !s.uiHidden })),
@@ -100,5 +107,5 @@ export const useViewer = create<ViewerState>((set) => ({
   setLabels: (labels) => set({ labels }),
   setModelState: (modelId, st) => set((s) => ({ modelState: { ...s.modelState, [modelId]: st } })),
   command: (cmd) => set((s) => ({ camera: { cmd, nonce: (s.camera?.nonce ?? 0) + 1 } })),
-  setZoomPercent: (zoomPercent) => set({ zoomPercent }),
+  setZoomPercent: (zoomPercent) => set((s) => (s.zoomPercent === zoomPercent ? s : { zoomPercent })),
 }));

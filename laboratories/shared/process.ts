@@ -24,6 +24,8 @@ export interface LabProcess {
   loop?: boolean;
   /** Step buttons show the step title instead of its number (e.g. mitosis phases). */
   namedSteps?: boolean;
+  /** Keep rendering while paused (continuous idle motion). Off by default: a paused process costs no frames. */
+  idle?: boolean;
   steps: ProcessStep[];
 }
 

@@ -32,7 +32,8 @@ export default defineConfig({
     { name: 'mobile-chromium', use: { ...devices['Pixel 7'] }, testMatch: /responsive\.spec\.ts/ },
   ],
   webServer: {
-    command: `npx next start -p ${PORT}`,
+    // Node on Windows only spawns .cmd shims by their full name
+    command: `${process.platform === 'win32' ? 'npx.cmd' : 'npx'} next start -p ${PORT}`,
     port: PORT,
     reuseExistingServer: false,
     env: { ...E2E_ENV, NODE_ENV: 'production' },

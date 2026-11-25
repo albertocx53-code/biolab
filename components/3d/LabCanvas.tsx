@@ -1,13 +1,15 @@
 'use client';
 
 import { Canvas } from '@react-three/fiber';
-import { AdaptiveDpr, Environment, Lightformer, PerformanceMonitor } from '@react-three/drei';
-import { EffectComposer, N8AO } from '@react-three/postprocessing';
+import { AdaptiveDpr, Environment, Lightformer } from '@react-three/drei';
+import { EffectComposer, N8AO, ToneMapping } from '@react-three/postprocessing';
+import { ToneMappingMode } from 'postprocessing';
 import { Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import * as THREE from 'three';
 import { QUALITY } from '@/engine/performance/quality';
 import { useViewer } from '@/engine/store';
 import { CameraRig, type CameraPreset } from './CameraRig';
+import { StatsOverlay, statsRequested } from './StatsOverlay';
 import { TestHook } from './TestHook';
 
 interface Props {
@@ -22,19 +24,21 @@ interface Props {
 /**
  * Shared WebGL canvas for every laboratory: quality profile, lighting,
  * adaptive resolution, BVH-accelerated raycasting and context-loss recovery.
+ *
+ * Rendering is on demand (`frameloop="demand"`): a still scene costs no frames.
+ * Anything that moves must call `invalidate()`.
  */
 export function LabCanvas({ children, cameraPreset, onPointerMissed, onContextLost, dark = false }: Props) {
   const quality = useViewer((s) => s.quality);
   const q = QUALITY[quality];
-  const [dprCap, setDprCap] = useState(q.dpr[1]);
   const [lost, setLost] = useState(false);
   const [canvasKey, setCanvasKey] = useState(0);
-
-  useEffect(() => setDprCap(q.dpr[1]), [q.dpr]);
+  const [stats, setStats] = useState(false);
+  useEffect(() => setStats(statsRequested()), []);
 
   // A quality change that toggles antialiasing replaces the canvas; React Three Fiber then
   // forces a context loss on the old one. Only the current canvas may report a real loss.
-  const canvasId = `${canvasKey}-${q.antialias}`;
+  const canvasId = `${canvasKey}-${q.antialias}-${q.ao}`;
   const liveCanvas = useRef(canvasId);
   liveCanvas.current = canvasId;
   useEffect(() => {
@@ -67,19 +71,21 @@ export function LabCanvas({ children, cameraPreset, onPointerMissed, onContextLo
   return (
     <Canvas
       key={canvasId}
-      dpr={[q.dpr[0], dprCap]}
+      dpr={q.dpr}
       gl={{ antialias: q.antialias && !q.ao, powerPreference: 'high-performance', alpha: true, preserveDrawingBuffer: false }}
       camera={{ fov: 32, near: 0.01, far: 50, position: cameraPreset.position }}
       frameloop="demand"
       onPointerMissed={(e) => {
         if ((e as MouseEvent).button === 0) onPointerMissed?.();
       }}
-      onCreated={({ gl }) => {
+      onCreated={({ gl, raycaster }) => {
         const createdAs = canvasId;
         gl.toneMapping = THREE.ACESFilmicToneMapping;
         gl.localClippingEnabled = true; // per-material cut-aways (e.g. the heart)
         gl.toneMappingExposure = 1.0;
         gl.setClearColor(0x000000, 0); // transparent: the CSS studio backdrop shows through
+        // three-mesh-bvh: stop at the first hit per mesh (the picker only needs the nearest point of each)
+        (raycaster as THREE.Raycaster & { firstHitOnly?: boolean }).firstHitOnly = true;
         const canvas = gl.domElement;
         canvas.addEventListener('webglcontextlost', (ev) => {
           if (liveCanvas.current !== createdAs) return; // old canvas being disposed
@@ -98,7 +104,7 @@ export function LabCanvas({ children, cameraPreset, onPointerMissed, onContextLo
       {q.environment && (
         // Procedural studio reflections: no HDR download, no external requests.
         <Suspense fallback={null}>
-          <Environment resolution={64} environmentIntensity={dark ? 0.5 : 0.65}>
+          <Environment resolution={q.envResolution} environmentIntensity={dark ? 0.5 : 0.65}>
             <Lightformer form="rect" intensity={2.4} position={[0, 3, 3.5]} scale={[5, 2.5, 1]} />
             <Lightformer form="rect" intensity={1.1} color="#dbeafe" position={[-4, 1.2, 0]} rotation-y={Math.PI / 2} scale={[3, 4, 1]} />
             <Lightformer form="rect" intensity={1.1} position={[4, 1.2, 0.5]} rotation-y={-Math.PI / 2} scale={[3, 4, 1]} />
@@ -107,21 +113,19 @@ export function LabCanvas({ children, cameraPreset, onPointerMissed, onContextLo
         </Suspense>
       )}
       {q.ao && (
-        <EffectComposer multisampling={4} enableNormalPass={false}>
-          <N8AO aoRadius={0.06} distanceFalloff={0.6} intensity={dark ? 2.2 : 2.6} quality="medium" halfRes />
+        // The composer disables the renderer's own tone mapping, so ACES is re-applied as the last pass;
+        // without it the "balanced" and "high" profiles looked washed out compared with "economy".
+        <EffectComposer multisampling={q.multisampling} enableNormalPass={false}>
+          <N8AO aoRadius={0.06} distanceFalloff={0.6} intensity={dark ? 2.2 : 2.6} quality={q.aoQuality} halfRes={q.aoHalfRes} />
+          <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
         </EffectComposer>
       )}
-      {q.adaptive && (
-        <PerformanceMonitor
-          onDecline={() => setDprCap((d) => Math.max(q.dpr[0], +(d - 0.25).toFixed(2)))}
-          onIncline={() => setDprCap((d) => Math.min(q.dpr[1], +(d + 0.25).toFixed(2)))}
-        >
-          <AdaptiveDpr pixelated={false} />
-        </PerformanceMonitor>
-      )}
+      {/* Resolution drops to dpr[0] only while the camera is moving (CameraRig regresses), never at rest. */}
+      {q.adaptive && <AdaptiveDpr pixelated={false} />}
       {children}
       <CameraRig preset={cameraPreset} />
       <TestHook />
+      {stats && <StatsOverlay />}
     </Canvas>
   );
 }

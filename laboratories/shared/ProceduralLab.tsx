@@ -17,10 +17,11 @@ import { ShortcutsHelp } from '@/components/presentation/ShortcutsHelp';
 import { useFullscreen } from '@/components/presentation/useFullscreen';
 import { Icon, type IconName } from '@/components/ui/Icon';
 import { Logo } from '@/components/ui/Logo';
+import { useShallow } from 'zustand/react/shallow';
 import { useViewer } from '@/engine/store';
 import { meshRegistry } from '@/engine/selection/registry';
 import { MaterialLibrary, type MaterialSpec } from '@/engine/visibility/materials';
-import { isWebGLAvailable, loadSavedQuality, pickDefaultQuality, readDeviceSignals } from '@/engine/performance/quality';
+import { isWebGLAvailable, loadSavedQuality, pickDefaultQuality, QUALITY, readDeviceSignals, setDetailScale } from '@/engine/performance/quality';
 import type { CatalogGroup } from '@/engine/types';
 import type { Structure } from '@/data/biology/schema';
 import type { LabCatalog } from './catalog';
@@ -114,14 +115,57 @@ export function ProceduralLab({ config: cfg, canUseStudio, tierLabel }: { config
   const rootRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<SearchBoxHandle>(null);
   const fs = useFullscreen(rootRef);
-  const s = useViewer();
+  // Only the slices this component renders: orbiting (zoom readout), camera commands and model
+  // load state change many times a second and must not re-render the whole laboratory UI.
+  const s = useViewer(
+    useShallow((st) => ({
+      selectedId: st.selectedId,
+      hoveredMeshId: st.hoveredMeshId,
+      presentation: st.presentation,
+      uiHidden: st.uiHidden,
+      quality: st.quality,
+      labels: st.labels,
+    })),
+  );
   const processId = useProcess((p) => p.id);
 
   const library = useMemo(() => new MaterialLibrary(cfg.materials, cfg.fallback), [cfg]);
   useEffect(() => () => library.dispose(), [library]);
 
+  // The quality profile decides the mesh density, so it is settled before the first model is built
+  // (saved choice, else device detection). Runs once per mount, client only.
+  useState(() => {
+    if (typeof window === 'undefined') return null;
+    useViewer.getState().setQuality(loadSavedQuality() ?? pickDefaultQuality(readDeviceSignals()));
+    return null;
+  });
+  const detail = QUALITY[s.quality].detail;
+
   const info = catalog.model(modelId)!;
-  const scene = useMemo(() => cfg.buildScene(modelId), [cfg, modelId]);
+  // Built models are kept for the life of the laboratory: switching back to a model costs nothing,
+  // and a quality change (new detail level) builds a fresh set.
+  const sceneCache = useRef(new Map<string, LabScene>());
+  const scene = useMemo(() => {
+    const key = `${modelId}@${detail}`;
+    let sc = sceneCache.current.get(key);
+    if (!sc) {
+      setDetailScale(detail);
+      sc = cfg.buildScene(modelId);
+      sceneCache.current.set(key, sc);
+    }
+    return sc;
+  }, [cfg, modelId, detail]);
+  useEffect(() => {
+    const cache = sceneCache.current;
+    return () => {
+      for (const sc of cache.values())
+        for (const m of sc.meshes) {
+          m.geometry.disposeBoundsTree?.();
+          m.geometry.dispose();
+        }
+      cache.clear();
+    };
+  }, []);
   const preset = scene.preset;
 
   const groups: CatalogGroup[] = useMemo(
@@ -162,7 +206,6 @@ export function ProceduralLab({ config: cfg, canUseStudio, tierLabel }: { config
     try {
       setDark(localStorage.getItem(THEME_KEY) === 'dark');
     } catch {}
-    useViewer.getState().setQuality(loadSavedQuality() ?? pickDefaultQuality(readDeviceSignals()));
     const q = new URLSearchParams(location.search).get('modelo');
     if (q && catalog.model(q)) setModelId(q);
     return () => {

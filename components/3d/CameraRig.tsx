@@ -6,6 +6,8 @@ import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { useViewer, type CameraView } from '@/engine/store';
 import { meshRegistry } from '@/engine/selection/registry';
+import { interaction } from '@/engine/interaction';
+import { QUALITY } from '@/engine/performance/quality';
 
 export interface CameraPreset {
   position: [number, number, number];
@@ -28,7 +30,10 @@ export function CameraRig({ preset }: { preset: CameraPreset }) {
   const ref = useRef<CameraControls>(null);
   const camera = useViewer((s) => s.camera);
   const setZoomPercent = useViewer((s) => s.setZoomPercent);
+  const adaptive = useViewer((s) => QUALITY[s.quality].adaptive);
   const invalidate = useThree((s) => s.invalidate);
+  const lastZoom = useRef(-1);
+  const lastZoomAt = useRef(0);
 
   // Initial placement
   useEffect(() => {
@@ -61,18 +66,42 @@ export function CameraRig({ preset }: { preset: CameraPreset }) {
     invalidate();
   }, [camera, preset, invalidate]);
 
+  useEffect(
+    () => () => {
+      interaction.cameraMoving = false;
+    },
+    [],
+  );
+
   return (
     <CameraControls
       ref={ref}
       makeDefault
+      // lets <AdaptiveDpr> drop the resolution while the camera moves (restored at rest)
+      regress={adaptive}
       minDistance={preset.minDistance}
       maxDistance={preset.maxDistance}
       smoothTime={0.35}
       draggingSmoothTime={0.08}
       dollyToCursor
+      onStart={() => {
+        interaction.cameraMoving = true;
+      }}
+      onEnd={() => {
+        interaction.cameraMoving = false;
+      }}
       onChange={() => {
         const c = ref.current;
-        if (c) setZoomPercent(Math.round((preset.distance / Math.max(c.distance, 1e-3)) * 100));
+        if (!c) return;
+        // The zoom readout is UI state: update it at most ~8×/s and only when the integer changes,
+        // so orbiting never re-renders the laboratory UI once per camera frame.
+        const now = performance.now();
+        if (now - lastZoomAt.current < 120) return;
+        const pct = Math.round((preset.distance / Math.max(c.distance, 1e-3)) * 100);
+        if (pct === lastZoom.current) return;
+        lastZoom.current = pct;
+        lastZoomAt.current = now;
+        setZoomPercent(pct);
       }}
     />
   );

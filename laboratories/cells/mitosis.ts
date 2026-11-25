@@ -5,7 +5,7 @@
  */
 import * as THREE from 'three';
 import type { CameraPreset } from '@/components/3d/CameraRig';
-import { ellipsoid, inside, merge, paint, rng, scaled, tangle, tube, wall, type Cut, type DistFn } from '@/laboratories/shared/geometry';
+import { ellipsoid, inside, merge, paint, refillWall, rng, scaled, tangle, tube, wall, type Cut, type DistFn } from '@/laboratories/shared/geometry';
 import type { MeshDef } from '@/laboratories/shared/types';
 
 export const MITOSIS_CUT: Cut = { center: 0.35, width: Math.PI / 2 };
@@ -225,14 +225,18 @@ export function membraneShape(P: number) {
 
 /** Rewrites the membrane geometry in place (same topology as `wall`). */
 export function deformMembrane(geo: THREE.BufferGeometry, shape: DistFn) {
+  // in place, no allocation per frame; a topology mismatch (e.g. quality changed) falls back to a rebuild
+  if (refillWall(geo, shape, 0.975, MITOSIS_CUT, SEG)) return;
   const fresh = wall(shape, 0.975, MITOSIS_CUT, SEG);
   const src = fresh.getAttribute('position');
   const dst = geo.getAttribute('position') as THREE.BufferAttribute;
-  (dst.array as Float32Array).set(src.array as Float32Array);
-  dst.needsUpdate = true;
-  geo.computeVertexNormals();
-  geo.computeBoundingBox();
-  geo.computeBoundingSphere();
+  if (src.count === dst.count) {
+    (dst.array as Float32Array).set(src.array as Float32Array);
+    dst.needsUpdate = true;
+    geo.computeVertexNormals();
+    geo.computeBoundingBox();
+    geo.computeBoundingSphere();
+  }
   fresh.dispose();
 }
 
