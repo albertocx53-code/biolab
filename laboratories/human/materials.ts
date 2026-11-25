@@ -6,8 +6,9 @@ import type { MaterialSpec } from '@/engine/visibility/materials';
  */
 const ORGAN = { roughness: 0.42, clearcoat: 0.35, clearcoatRoughness: 0.4 };
 export const HUMAN_MATERIALS: Record<string, MaterialSpec> = {
-  pele: { color: '#D9A88A', roughness: 0.58, sheen: 0.6, sheenColor: '#F6D2BE', polygonOffset: true },
-  'pele-genital': { color: '#D9A88A', roughness: 0.58, sheen: 0.6, sheenColor: '#F6D2BE', polygonOffset: true },
+  // skin: warm tone, soft velvet sheen, fine pore grain and a faint warm rim that stands in for subsurface scattering
+  pele: { color: '#D8A287', roughness: 0.52, sheen: 0.42, sheenColor: '#FFD9C4', clearcoat: 0.06, clearcoatRoughness: 0.6, polygonOffset: true, organic: { noise: 0.07, scale: 55, rim: 0.14, rimColor: '#FFB59A', rimPower: 2.6 } },
+  'pele-genital': { color: '#D8A287', roughness: 0.52, sheen: 0.42, sheenColor: '#FFD9C4', clearcoat: 0.06, clearcoatRoughness: 0.6, polygonOffset: true, organic: { noise: 0.07, scale: 55, rim: 0.14, rimColor: '#FFB59A', rimPower: 2.6 } },
   osso: { color: '#EAE0CC', roughness: 0.55, clearcoat: 0.08 },
   dente: { color: '#F6F2E8', roughness: 0.25, clearcoat: 0.6 },
   cartilagem: { color: '#C7DCE4', roughness: 0.35, clearcoat: 0.45 },

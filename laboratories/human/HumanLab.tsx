@@ -25,6 +25,7 @@ import { ShortcutsHelp } from '@/components/presentation/ShortcutsHelp';
 import { useFullscreen } from '@/components/presentation/useFullscreen';
 import { Icon } from '@/components/ui/Icon';
 import { Logo } from '@/components/ui/Logo';
+import { useShallow } from 'zustand/react/shallow';
 import { useViewer } from '@/engine/store';
 import { meshRegistry } from '@/engine/selection/registry';
 import { MaterialLibrary } from '@/engine/visibility/materials';
@@ -80,7 +81,9 @@ function cutPlanes(cut: OrganCut, index: HumanIndex): { group: string; planes: T
 }
 
 const PRESET: CameraPreset = { position: [0, 0.88, 3.8], target: [0, 0.86, 0], distance: 3.8, minDistance: 0.08, maxDistance: 9 };
-const DEFAULT_DEPTH = 1; // open on the muscular layer, like an anatomy atlas
+const DEFAULT_DEPTH = 0; // open on the skin: a whole person first, then peel the layers like an atlas
+/** Visible parts of the eyes: shown with the skin even while the nervous system is off (they live in that model). */
+const EYE_MESHES = ['sclera-dir', 'sclera-esq', 'cornea-dir', 'cornea-esq', 'iris-dir', 'iris-esq'];
 const THEME_KEY = 'biolab.labTheme';
 
 const LAYER_LABEL: Record<string, string> = {
@@ -123,7 +126,21 @@ export function HumanLab({ canUseStudio, tierLabel }: { canUseStudio: boolean; t
   const searchRef = useRef<SearchBoxHandle>(null);
   const fs = useFullscreen(rootRef);
 
-  const s = useViewer();
+  // Only the slices this component renders: the zoom readout and camera commands change on every
+  // camera frame and must not re-render the whole laboratory UI (883 lines of it).
+  const s = useViewer(
+    useShallow((st) => ({
+      groupVisible: st.groupVisible,
+      selectedId: st.selectedId,
+      hoveredMeshId: st.hoveredMeshId,
+      presentation: st.presentation,
+      uiHidden: st.uiHidden,
+      panelOpen: st.panelOpen,
+      modelState: st.modelState,
+      quality: st.quality,
+      labels: st.labels,
+    })),
+  );
   const library = useMemo(() => new MaterialLibrary(HUMAN_MATERIALS, HUMAN_FALLBACK), []);
   useEffect(() => () => library.dispose(), [library]);
 
@@ -149,8 +166,8 @@ export function HumanLab({ canUseStudio, tierLabel }: { canUseStudio: boolean; t
       .then((raw) => {
         if (cancelled) return;
         const idx = buildHumanIndex(raw);
-        // blood vessels are part of what a teacher expects to see when the muscles are peeled away
-        useViewer.getState().init(idx.raw.groups.map((g) => ({ id: g.id, visible: g.id === 'vasos' ? true : g.defaultVisible, opacity: g.defaultOpacity })));
+        useViewer.getState().init(idx.raw.groups.map((g) => ({ id: g.id, visible: g.defaultVisible, opacity: g.defaultOpacity })));
+        useViewer.getState().setPinned(EYE_MESHES.filter((id) => idx.meshInfo.has(id)));
         applyDepth(DEFAULT_DEPTH);
         setIndex(idx);
         performance.mark?.('biolab:catalog-ready');
@@ -196,9 +213,11 @@ export function HumanLab({ canUseStudio, tierLabel }: { canUseStudio: boolean; t
   }, [sex, sexMeshes, library]);
 
   // ---- lazy model loading: a model is requested the first time one of its groups becomes visible
+  // (or holds a pinned mesh, like the eyes)
   useEffect(() => {
     if (!index) return;
-    const needed = [...new Set(index.raw.groups.filter((g) => s.groupVisible[g.id]).map((g) => g.modelId))];
+    const pinnedGroups = new Set(EYE_MESHES.map((id) => index.meshInfo.get(id)?.group));
+    const needed = [...new Set(index.raw.groups.filter((g) => s.groupVisible[g.id] || pinnedGroups.has(g.id)).map((g) => g.modelId))];
     setRequested((prev) => {
       const add = needed.filter((m) => !prev.includes(m));
       return add.length ? [...prev, ...add] : prev;
@@ -292,6 +311,32 @@ export function HumanLab({ canUseStudio, tierLabel }: { canUseStudio: boolean; t
     },
     [showCirculation],
   );
+
+  /**
+   * "Only the heart": the heart and its great vessels alone on the stage, beating
+   * (cardiac cycle), with the scientific panel open. Everything else is not drawn.
+   */
+  const soloHeart = useCallback(() => {
+    if (!index) return;
+    showCirculation(false);
+    const meshes = ['coracao', 'arterias-pulmonares', 'veias-pulmonares', 'veias-cavas', 'aorta'].flatMap((id) => index.meshesOf(id));
+    const st = useViewer.getState();
+    st.setGroupOpacity('esqueletico', 1);
+    st.setGroupOpacity('respiratorio', 1);
+    st.isolate(meshes, 'solo');
+    st.select('coracao');
+    const p = useProcess.getState();
+    if (p.id !== 'ciclo-cardiaco') p.start('ciclo-cardiaco');
+    // frame the heart once its meshes (and the vessels model, if it was still downloading) are in the scene
+    const heart = index.meshesOf('coracao');
+    const started = performance.now();
+    const tryFocus = () => {
+      const ready = heart.every((id) => meshRegistry.has(id)) && !Object.values(useViewer.getState().modelState).includes('loading');
+      if (ready || performance.now() - started > 8000) useViewer.getState().command({ type: 'focus', meshIds: heart });
+      else setTimeout(tryFocus, 150);
+    };
+    setTimeout(tryFocus, 120);
+  }, [index, showCirculation]);
 
   /** Classroom view of one anatomical system: peel the outer layers as needed, show the group and frame it. */
   const showSystem = useCallback(
@@ -722,6 +767,9 @@ export function HumanLab({ canUseStudio, tierLabel }: { canUseStudio: boolean; t
           <div className="border-b border-line p-3" data-testid="circulation-tools">
             <p className="eyebrow mb-2 px-1">Coração e circulação</p>
             <div className="flex flex-wrap gap-1.5">
+              <button type="button" className="btn btn-primary h-8 px-2.5 text-[12.5px]" onClick={soloHeart} data-testid="solo-heart">
+                <Icon name="eye" size={14} /> Só o coração
+              </button>
               <button type="button" className="btn btn-ghost h-8 px-2.5 text-[12.5px]" onClick={() => showCirculation(true)} data-testid="view-circulation">
                 <Icon name="focus" size={14} /> Ver coração e vasos
               </button>

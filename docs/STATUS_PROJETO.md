@@ -1,6 +1,6 @@
 # Status do projeto
 
-Atualizado em 24/11/2026 — **escolha de corpo masculino ou feminino** (mamas, vulva e pele da região púbica modeladas pelo BioLab); antes: rins, encéfalo e sistema reprodutor feminino; antes: células orgânicas, coração/circulação, meiose, fissão binária e roteiros de aula.
+Atualizado em 24/11/2026 — **revisão de desempenho do motor 3D** (render sob demanda de verdade, perfis de qualidade com diferença real, tone mapping restaurado, cache de modelos, `?stats=1`; ver PERFORMANCE_TESTS.md) e **painéis de vidro fosco** na interface; antes: **escolha de corpo masculino ou feminino** (mamas, vulva e pele da região púbica modeladas pelo BioLab); antes: rins, encéfalo e sistema reprodutor feminino; antes: células orgânicas, coração/circulação, meiose, fissão binária e roteiros de aula.
 
 ## Pronto e testado
 
@@ -19,7 +19,7 @@ Atualizado em 24/11/2026 — **escolha de corpo masculino ou feminino** (mamas, 
 | Laboratório de Células: células animal, vegetal e procariótica (Gram-negativa) com visual orgânico (ruído, borda de Fresnel, membranas em dois tons) e ~55 estruturas clicáveis (microvilosidades, citoesqueleto, plasmodesmos, tonoplasto, amiloplastos, membrana externa, periplasma, inclusões…) | ✅ |
 | Células: mitocôndria e cloroplasto em detalhe, mitose em 6 fases, meiose em 9 fases com crossing-over, fissão binária em 4 etapas | ✅ |
 | Células: animações de síntese de proteínas, respiração (célula e mitocôndria), fotossíntese (célula e cloroplasto), osmose e flagelos peritríquios girando | ✅ |
-| Corpo humano: vasos visíveis por padrão, vista "Coração e circulação", corte coronal do coração (valvas e músculos papilares), animações do caminho do sangue e do ciclo cardíaco, seleção que mantém a cor do órgão | ✅ |
+| Corpo humano: abre na pele (pessoa inteira, olhos visíveis), vasos entram quando a pele é descascada; vista "Coração e circulação", **"Só o coração"** (coração e grandes vasos sozinhos no palco, batendo, com o painel científico), botão "Ver só esta" para qualquer estrutura, corte coronal do coração (valvas e músculos papilares), animações do caminho do sangue e do ciclo cardíaco, seleção que mantém a cor do órgão | ✅ |
 | Corpo humano: rins (córtex, pirâmides, pelve e cálices) com corte frontal; encéfalo (4 lobos com giros, cerebelo, mesencéfalo, ponte, bulbo, corpo caloso, tálamo, hipotálamo, ventrículos) com corte mediano; seletor "Corpo: masculino / feminino": o corpo feminino troca os órgãos genitais e reprodutores, recorta a genitália masculina da pele e acrescenta monte do púbis e grandes lábios, vulva (pequenos lábios e clitóris), mamas com aréola, papila, lobos da glândula mamária e ductos lactíferos, além do sistema reprodutor feminino interno (útero, colo, tubas com fímbrias, ovários, vagina). Geometria própria em `laboratories/human/organs.ts` | ✅ |
 | Laboratório de Genética: dupla-hélice, nucleotídeos (A, T, G, C e U), mRNA + tRNA, do DNA ao cromossomo; animações de replicação, transcrição com splicing, tradução no ribossomo e 5 tipos de mutação (anemia falciforme, silenciosa, sem sentido, inserção, deleção); ferramentas de aula "Quadro de Punnett" (mono e diibridismo, dominância incompleta, ABO, daltonismo) e "Código genético" (tradutor de sequências com tabela de códons) | ✅ |
 | Laboratório de Microrganismos: bactéria em corte e 7 formas bacterianas, bacteriófago T4, coronavírus em corte, levedura, bolor-preto-do-pão, cogumelo com micélio, ameba, paramécio e euglena; animações dos ciclos lítico e lisogênico, conjugação, seleção de bactérias resistentes a antibióticos, brotamento e fagocitose; ferramentas "Escala de tamanhos", "Comparar" (vírus × bactérias × fungos × protozoários × algas) e "Crescimento bacteriano" | ✅ |
@@ -38,7 +38,8 @@ Atualizado em 24/11/2026 — **escolha de corpo masculino ou feminino** (mamas, 
 | Revisão do conteúdo por professor | Pendente |
 | Checkout / envio automático de chaves | Campo `orderRef` pronto; integração não feita |
 | Armazenamento de chaves em banco | Hoje arquivo (servidor único); SQL pronto em `docs/db/` |
-| Medição em GPU real e em dispositivos escolares | Pendente (só SwiftShader) |
+| Medição em GPU real | ✅ RTX 5050 (ver PERFORMANCE_TESTS.md); dispositivos escolares (GPU integrada, Chromebook, tablet) pendentes |
+| Pele do atlas | A malha do Z-Anatomy traz sulcos escuros modelados (ombros, braços, tórax) e não tem orelhas, cabelo nem couro cabeludo; o corpo feminino usa o esqueleto e a silhueta do masculino. Próxima etapa: corpos externos novos (Fase 3b) |
 
 ## Próximos passos sugeridos
 

@@ -22,13 +22,18 @@ export function applyDepth(v: number) {
   const st = useViewer.getState();
   for (const [i, { group, until }] of LAYERS.entries()) {
     const op = Math.min(1, Math.max(0, until - v));
-    // muscles are completely wrapped by opaque skin: skip drawing them (no z-fighting, fewer draw calls).
-    // Bones stay on under the muscles, because parts of the skeleton (tibia, patella, skull) are exposed.
-    const coveredByOuter = i === 1 && v < 0.03;
+    // Under fully opaque skin nothing inside is drawn: muscles and bones would only cost draw calls, and
+    // the atlas skeleton sits so close to the skin (clavicle, sternum, acromion) that it pokes through.
+    // Once the skin starts fading, bones stay on under the muscles (tibia, patella and skull are exposed).
+    const coveredByOuter = (i === 1 || i === 2) && v < 0.03;
     const visible = op > 0.03 && !coveredByOuter;
     if (!!st.groupVisible[group] !== visible) st.setGroupVisible(group, visible);
     if (visible) st.setGroupOpacity(group, op > 0.97 ? 1 : op);
   }
+  // Blood vessels belong to the picture once the skin is peeled (an atlas plate), not under opaque skin,
+  // where they would only cost download and draw calls.
+  const vessels = v >= 0.97;
+  if (!!st.groupVisible.vasos !== vessels) st.setGroupVisible('vasos', vessels);
 }
 
 export function DepthSlider({ value, onChange, large = false }: { value: number; onChange: (v: number) => void; large?: boolean }) {

@@ -19,7 +19,7 @@ export async function openHumanLab(page: Page) {
       const b = (window as BiolabWindow).__biolab;
       if (!b?.registry || !b.three || b.registry.size() < 300) return false;
       const st = b.viewer.getState().modelState as Record<string, string>;
-      if (st.muscular !== 'ready' || st.esqueletico !== 'ready') return false;
+      if (st.tegumentar !== 'ready' || st.coracao !== 'ready') return false;
       return !Object.values(st).includes('loading');
     },
     null,
